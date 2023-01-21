@@ -1,8 +1,9 @@
 use walkdir::WalkDir;
+use std::ffi::OsStr;
 use std::fmt;
-use std::path::Path;
-use std::fs;
 use std::io::BufRead;
+use std::path::{Path, PathBuf};
+use std::fs;
 
 #[derive(Debug)]
 struct Episode {
@@ -29,15 +30,32 @@ impl Episode {
 
 #[derive(Debug)]
 struct Rename {
-  from_file_name: String,
-  to_file_name: String,
+  from_file_name: PathBuf,
+  to_file_name: PathBuf,
 }
 
 impl Rename {
-  fn new(from: &str, to: &str) -> Self {
+  fn new(from: PathBuf, to: PathBuf) -> Self {
     Self {
-      from_file_name: from.to_owned(),
-      to_file_name: to.to_owned(),
+      from_file_name: from,
+      to_file_name: to,
+    }
+  }
+}
+
+#[derive(Debug)]
+struct FileNameAndExt {
+  path: PathBuf,
+  file_name: String,
+  ext: String
+}
+
+impl FileNameAndExt {
+  fn new(path: &Path, file_name: &OsStr, ext: &OsStr) -> Self {
+    Self {
+      path: path.to_path_buf(),
+      file_name: file_name.to_string_lossy().to_string(),
+      ext: ext.to_string_lossy().to_string()
     }
   }
 }
@@ -53,55 +71,113 @@ fn main() {
   // TODO: Pass this in via config file or read it from TVDB
   let episode_names =
     vec![
-      Episode::new("S04E01", "Tattered and Torn", "81670"),
-      Episode::new("S04E02", "Kommando", "81670"),
-      Episode::new("S04E03", "Buffalo Shuffle", "81670"),
-      Episode::new("S04E04", "Downstairs Upstairs", "81670"),
-      Episode::new("S04E05", "Monsieur Murdoch", "81670"),
-      Episode::new("S04E06", "Dead End Street", "81670"),
-      Episode::new("S04E07", "Confederate Treasure", "81670"),
-      Episode::new("S04E08", "Dial M for Murdoch", "81670"),
-      Episode::new("S04E09", "The Black Hand", "81670"),
-      Episode::new("S04E10", "Voices", "81670"),
-      Episode::new("S04E11", "Bloodlust", "81670"),
-      Episode::new("S04E12", "Kissing Bandit", "81670"),
-      Episode::new("S04E13", "Murdoch in Wonderland", "81670"),
+      Episode::new("S01E01", "Exodus", "70355"),
+      Episode::new("S01E02", "The Unholy Alliance", "70355"),
+      Episode::new("S01E03", "Berbils", "70355"),
+      Episode::new("S01E04", "The Slaves of Castle Plun-Darr", "70355"),
+      Episode::new("S01E05", "Pumm-Ra", "70355"),
+      Episode::new("S01E06", "The Terror of Hammerhand", "70355"),
+      Episode::new("S01E07", "Trouble with Time", "70355"),
+      Episode::new("S01E08", "The Tower of Traps", "70355"),
+      Episode::new("S01E09", "The Garden of Delights", "70355"),
+      Episode::new("S01E10", "Mandora: The Evil Chaser", "70355"),
+      Episode::new("S01E11", "The Ghost Warrior", "70355"),
+      Episode::new("S01E12", "The Doomgaze", "70355"),
+      Episode::new("S01E13", "Lord of the Snows", "70355"),
+      Episode::new("S01E14", "The Spaceship Beneath the Sands", "70355"),
+      Episode::new("S01E15", "The Time Capsule", "70355"),
+      Episode::new("S01E16", "The Fireballs of Plun-Darr", "70355"),
+      Episode::new("S01E17", "All that Glitters", "70355"),
+      Episode::new("S01E18", "Spitting Image", "70355"),
+      Episode::new("S01E19", "Mongor", "70355"),
+      Episode::new("S01E20", "Return to Thundera", "70355"),
+      Episode::new("S01E21", "Dr. Dometone", "70355"),
+      Episode::new("S01E22", "The Astral Prison", "70355"),
+      Episode::new("S01E23", "The Crystal Queen", "70355"),
+      Episode::new("S01E24", "Safari Joe  Snarf Takes up the Challenge", "70355"),
+      Episode::new("S01E26", "Sixth Sense", "70355"),
+      Episode::new("S01E27", "The Thunder-Cutter", "70355"),
+      Episode::new("S01E28", "The Wolfrat", "70355"),
+      Episode::new("S01E29", "Feliner (1)", "70355"),
+      Episode::new("S01E30", "Feliner (2)", "70355"),
+      Episode::new("S01E31", "Mandora and the Pirates", "70355"),
+      Episode::new("S01E32", "Return of the Driller", "70355"),
+      Episode::new("S01E33", "Dimension Doom", "70355"),
+      Episode::new("S01E34", "Queen of 8 Legs", "70355"),
+      Episode::new("S01E35", "Sword in a Hole", "70355"),
+      Episode::new("S01E36", "The Evil Harp of Charr-Nin", "70355"),
+      Episode::new("S01E37", "Lion-O's Anointment First Day: The Trial of Strength", "70355"),
+      Episode::new("S01E38", "The Demolisher", "70355"),
+      Episode::new("S01E39", "Monkian's Bargain", "70355"),
+      Episode::new("S01E40", "Tight Squeeze", "70355"),
+      Episode::new("S01E41", "The Micrits", "70355"),
+      Episode::new("S01E42", "Lion-O's Anointment Second Day: The Trial of Speed", "70355"),
+      Episode::new("S01E43", "The Rock Giant", "70355"),
+      Episode::new("S01E44", "Jackalman's Rebellion", "70355"),
+      Episode::new("S01E45", "Turmagar the Tuska", "70355"),
+      Episode::new("S01E46", "Lion-O's Anointment Third Day: The Trial of Cunning", "70355"),
+      Episode::new("S01E47", "The Mumm-Ra Berbil", "70355"),
+      Episode::new("S01E48", "Mechanical Plague", "70355"),
+      Episode::new("S01E49", "Trapped", "70355"),
+      Episode::new("S01E50", "Lion-O's Anointment Fourth Day: The Trial of Mind Power", "70355"),
+      Episode::new("S01E51", "Excalibur", "70355"),
+      Episode::new("S01E52", "Secret of the Ice King", "70355"),
+      Episode::new("S01E53", "Good and Ugly", "70355"),
+      Episode::new("S01E54", "The Transfer", "70355"),
+      Episode::new("S01E55", "Divide and Conquer", "70355"),
+      Episode::new("S01E56", "Dream Master", "70355"),
+      Episode::new("S01E57", "Out of Sight", "70355"),
+      Episode::new("S01E58", "The Mountain", "70355"),
+      Episode::new("S01E59", "The Superpower Potion", "70355"),
+      Episode::new("S01E60", "Eye of the Beholder", "70355"),
+      Episode::new("S01E61", "Lion-O's Anointment Final Day: The Trial of Evil", "70355"),
+      Episode::new("S01E62", "The Trouble with ThunderKittens", "70355"),
+      Episode::new("S01E63",  "Mumm-Rana",  "70355"),
+      Episode::new("S01E64",  "The Shifter",  "70355"),
+      Episode::new("S01E65",  "Fond Memories",  "70355"),
     ];
 
   let mut dirs: Vec<_> = WalkDir::new(working_dir)
       .into_iter()
       .filter_map(|re| re.ok())
-      .filter(|dir_entry| dir_entry.path().is_file() && dir_entry.path().to_string_lossy().to_string().contains("/disk"))
-      .map(|dir_entry| {
-        dir_entry.into_path().into_os_string().into_string().unwrap()
-      })
-      .collect();
+      .filter_map(|dir_entry| {
+        let p = dir_entry.path();
+        let is_file = p.is_file();
+        let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disk");
+        if is_file && has_disk_subdirectory {
+          p.file_name().and_then(|name|{
+            p.extension().map(|ext| FileNameAndExt::new(p, name, ext))  // Some(FileNameAndExt)
+          })
+        } else {
+          None
+        }
+     })
+    .collect();
 
-  dirs.sort();
+  dirs.sort_by(|fne1, fne2| fne1.path.partial_cmp(&fne2.path).unwrap());
 
   if dirs.len() > episode_names.len() {
     println!("Not enough Episode names ({}) to match actual files extracted ({})", episode_names.len(), dirs.len());
+    println!("Make sure you have the same number of episode names as extracted files (or more)");
     println!("Aborting!!!");
   } else {
     let files_to_rename: Vec<_> =
       dirs
-        .iter()
+        .into_iter()
         .enumerate()
-        .map(|(i, original_file_name)|{
-          let p = Path::new(original_file_name);
-          let ext = p.extension().map(|os| os.to_string_lossy()).expect(&format!("could not get extension for {}", p.to_string_lossy()));
+        .map(|(i, fne)|{
           let episode = episode_names.get(i).expect(&format!("could not read episode_names index: {}", i));
-          let file_name_with_ext = format!("{}.{}",episode, ext);
+          let file_name_with_ext = format!("{}.{}",episode, fne.ext);
           let output_file_path = Path::new(target_dir).join(file_name_with_ext);
-          let output_file_name = output_file_path.to_string_lossy().to_string();
-          Rename::new(original_file_name, &output_file_name)
+          let path_to_output_file = output_file_path.to_path_buf();
+          Rename::new(fne.path, path_to_output_file)
         })
         .collect();
 
 
     println!("The following renames will be performed:");
     for f in &files_to_rename {
-      println!("{} -> {}", f.from_file_name, f.to_file_name)
+      println!("{:?} -> {:?}", f.from_file_name, f.to_file_name)
     }
 
     println!("");
@@ -122,6 +198,6 @@ fn main() {
 
 fn perform_rename(renames: &[Rename]) {
   for r in renames {
-    fs::rename(&r.from_file_name, &r.to_file_name).expect(&format!("could not rename {} -> {}", &r.from_file_name, &r.to_file_name))
+    fs::rename(&r.from_file_name, &r.to_file_name).expect(&format!("could not rename {:?} -> {:?}", &r.from_file_name, &r.to_file_name))
   }
 }
