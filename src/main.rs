@@ -1,64 +1,12 @@
 use walkdir::WalkDir;
-use std::ffi::OsStr;
-use std::fmt;
+
+
 use std::io::BufRead;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::fs;
+use models::*;
 
-#[derive(Debug)]
-struct Episode {
-  number: String,
-  description: String,
-  tvdb: String,
-}
-
-impl fmt::Display for Episode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} - {} {{tvdb-{}}}", self.number, self.description, self.tvdb)
-    }
-}
-
-impl Episode {
-  fn new(num: &str, desc: &str, tv: &str) -> Self {
-    Self {
-      number: num.to_owned(),
-      description: desc.to_owned(),
-      tvdb: tv.to_owned()
-    }
-  }
-}
-
-#[derive(Debug)]
-struct Rename {
-  from_file_name: PathBuf,
-  to_file_name: PathBuf,
-}
-
-impl Rename {
-  fn new(from: PathBuf, to: PathBuf) -> Self {
-    Self {
-      from_file_name: from,
-      to_file_name: to,
-    }
-  }
-}
-
-#[derive(Debug)]
-struct FileNameAndExt {
-  path: PathBuf,
-  file_name: String,
-  ext: String
-}
-
-impl FileNameAndExt {
-  fn new(path: &Path, file_name: &OsStr, ext: &OsStr) -> Self {
-    Self {
-      path: path.to_path_buf(),
-      file_name: file_name.to_string_lossy().to_string(),
-      ext: ext.to_string_lossy().to_string()
-    }
-  }
-}
+mod models;
 
 fn main() {
 
@@ -137,7 +85,7 @@ fn main() {
       Episode::new("S01E65",  "Fond Memories",  "70355"),
     ];
 
-  let mut dirs: Vec<_> = WalkDir::new(working_dir)
+  let mut dirs: Vec<FileNameAndExt> = WalkDir::new(working_dir)
       .into_iter()
       .filter_map(|re| re.ok())
       .filter_map(|dir_entry| {
@@ -154,7 +102,7 @@ fn main() {
      })
     .collect();
 
-  dirs.sort_by(|fne1, fne2| fne1.path.partial_cmp(&fne2.path).unwrap());
+  dirs.sort_by(|fne1, fne2| fne1.partial_cmp(&fne2).unwrap());
 
   if dirs.len() > episode_names.len() {
     println!("Not enough Episode names ({}) to match actual files extracted ({})", episode_names.len(), dirs.len());
