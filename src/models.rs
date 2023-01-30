@@ -72,3 +72,13 @@ impl PartialOrd for FileNameAndExt {
         self.path.partial_cmp(&other.path)
     }
 }
+
+
+#[derive(Debug)]
+pub struct DvdRipsDir(pub PathBuf);
+
+#[derive(Debug)]
+pub struct EpisodeGuide(pub PathBuf);
+
+#[derive(Debug)]
+pub struct RenamesDir(pub PathBuf);

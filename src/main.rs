@@ -37,12 +37,12 @@ fn print_error_if_file_not_found(name: &str, p: &Path) {
   }
 }
 
-fn program() {
+fn program(dvd_rips: &DvdRipsDir, renames_dir: &RenamesDir) {
   // TODO: Pass this in
-  let working_dir = "/Volumes/MediaDrive/TV_Rips"; //current dir
+  let dvd_rips_directory =  &dvd_rips.0; //"/Volumes/MediaDrive/TV_Rips"; //current dir
 
   // TODO: Pass this in
-  let target_dir = "/Volumes/MediaDrive/TV";
+  let renames_directory = &renames_dir.0;//"/Volumes/MediaDrive/TV";
 
   // TODO: Pass this in via config file or read it from TVDB
   let episode_names =
@@ -62,7 +62,7 @@ fn program() {
       Episode::new("S05E13", "Twentieth Century Murdoch", "81670"),
     ];
 
-  let mut dirs: Vec<FileNameAndExt> = WalkDir::new(working_dir)
+  let mut dirs: Vec<FileNameAndExt> = WalkDir::new(dvd_rips_directory)
       .into_iter()
       .filter_map(|re| re.ok())
       .filter_map(|dir_entry| {
@@ -93,7 +93,7 @@ fn program() {
         .map(|(i, fne)|{
           let episode = episode_names.get(i).expect(&format!("could not read episode_names index: {}", i));
           let file_name_with_ext = format!("{}.{}",episode, fne.ext);
-          let output_file_path = Path::new(target_dir).join(file_name_with_ext);
+          let output_file_path = renames_directory.join(file_name_with_ext);
           let path_to_output_file = output_file_path.to_path_buf();
           Rename::new(fne.path, path_to_output_file)
         })
