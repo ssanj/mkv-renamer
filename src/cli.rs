@@ -4,9 +4,10 @@ use clap::Parser;
 #[clap(author, version, about)]
 pub struct Args {
 
-  /// The location of series configuration file
+  /// The location of series metadata file
+  /// Format: <SERIES>/SERIES_NAME-TVDBID/season-<SEASON_NUM>.json
   #[clap(short, long, value_parser)]
-  pub config_file: String,
+  pub series_metadata: String,
 
   /// The location of .mkv to be renamed
   #[clap(short, long, value_parser)]

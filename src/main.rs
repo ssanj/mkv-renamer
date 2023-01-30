@@ -16,21 +16,21 @@ mod cli;
 fn main() {
   let config = get_cli_args();
   println!("config: {:?}", config);
-  let config_file = config.config_file;
+  let series_metadata_file = config.series_metadata;
   let dvd_rips_directory = config.dvd_rips;
   let renames_directory = config.renames_directory;
 
-  let config_file_path = Path::new(&config_file);
+  let series_metadata_path = Path::new(&series_metadata_file);
   let dvd_rips_directory_path = Path::new(&dvd_rips_directory);
   let renames_directory_path = Path::new(&renames_directory);
 
-  if !(config_file_path.exists() && dvd_rips_directory_path.exists() && renames_directory_path.exists()) {
+  if !(series_metadata_path.exists() && dvd_rips_directory_path.exists() && renames_directory_path.exists()) {
       println!("One or more supplied file paths do not exist:");
-      print_error_if_file_not_found("config_file", config_file_path);
+      print_error_if_file_not_found("series_metadata", series_metadata_path);
       print_error_if_file_not_found("dvd_rips_directory", dvd_rips_directory_path);
       print_error_if_file_not_found("renames_directory", renames_directory_path)
   } else {
-    let series_metadata = get_series_metadata(EpisodeGuide(config_file_path.to_owned()));
+    let series_metadata = get_series_metadata(EpisodeGuide(series_metadata_path.to_owned()));
     println!("metadata: {:?}", series_metadata);
     println!("done")
   }
