@@ -5,11 +5,17 @@ use std::io::BufRead;
 use std::path::Path;
 use std::fs;
 use models::*;
+use cli::*;
 
 mod models;
+mod cli;
 
 fn main() {
+  let config = get_cli_args();
+  println!("config: {:?}", config)
+}
 
+fn program() {
   // TODO: Pass this in
   let working_dir = "/Volumes/MediaDrive/TV_Rips"; //current dir
 
@@ -19,70 +25,19 @@ fn main() {
   // TODO: Pass this in via config file or read it from TVDB
   let episode_names =
     vec![
-      Episode::new("S01E01", "Exodus", "70355"),
-      Episode::new("S01E02", "The Unholy Alliance", "70355"),
-      Episode::new("S01E03", "Berbils", "70355"),
-      Episode::new("S01E04", "The Slaves of Castle Plun-Darr", "70355"),
-      Episode::new("S01E05", "Pumm-Ra", "70355"),
-      Episode::new("S01E06", "The Terror of Hammerhand", "70355"),
-      Episode::new("S01E07", "Trouble with Time", "70355"),
-      Episode::new("S01E08", "The Tower of Traps", "70355"),
-      Episode::new("S01E09", "The Garden of Delights", "70355"),
-      Episode::new("S01E10", "Mandora: The Evil Chaser", "70355"),
-      Episode::new("S01E11", "The Ghost Warrior", "70355"),
-      Episode::new("S01E12", "The Doomgaze", "70355"),
-      Episode::new("S01E13", "Lord of the Snows", "70355"),
-      Episode::new("S01E14", "The Spaceship Beneath the Sands", "70355"),
-      Episode::new("S01E15", "The Time Capsule", "70355"),
-      Episode::new("S01E16", "The Fireballs of Plun-Darr", "70355"),
-      Episode::new("S01E17", "All that Glitters", "70355"),
-      Episode::new("S01E18", "Spitting Image", "70355"),
-      Episode::new("S01E19", "Mongor", "70355"),
-      Episode::new("S01E20", "Return to Thundera", "70355"),
-      Episode::new("S01E21", "Dr. Dometone", "70355"),
-      Episode::new("S01E22", "The Astral Prison", "70355"),
-      Episode::new("S01E23", "The Crystal Queen", "70355"),
-      Episode::new("S01E24", "Safari Joe  Snarf Takes up the Challenge", "70355"),
-      Episode::new("S01E26", "Sixth Sense", "70355"),
-      Episode::new("S01E27", "The Thunder-Cutter", "70355"),
-      Episode::new("S01E28", "The Wolfrat", "70355"),
-      Episode::new("S01E29", "Feliner (1)", "70355"),
-      Episode::new("S01E30", "Feliner (2)", "70355"),
-      Episode::new("S01E31", "Mandora and the Pirates", "70355"),
-      Episode::new("S01E32", "Return of the Driller", "70355"),
-      Episode::new("S01E33", "Dimension Doom", "70355"),
-      Episode::new("S01E34", "Queen of 8 Legs", "70355"),
-      Episode::new("S01E35", "Sword in a Hole", "70355"),
-      Episode::new("S01E36", "The Evil Harp of Charr-Nin", "70355"),
-      Episode::new("S01E37", "Lion-O's Anointment First Day: The Trial of Strength", "70355"),
-      Episode::new("S01E38", "The Demolisher", "70355"),
-      Episode::new("S01E39", "Monkian's Bargain", "70355"),
-      Episode::new("S01E40", "Tight Squeeze", "70355"),
-      Episode::new("S01E41", "The Micrits", "70355"),
-      Episode::new("S01E42", "Lion-O's Anointment Second Day: The Trial of Speed", "70355"),
-      Episode::new("S01E43", "The Rock Giant", "70355"),
-      Episode::new("S01E44", "Jackalman's Rebellion", "70355"),
-      Episode::new("S01E45", "Turmagar the Tuska", "70355"),
-      Episode::new("S01E46", "Lion-O's Anointment Third Day: The Trial of Cunning", "70355"),
-      Episode::new("S01E47", "The Mumm-Ra Berbil", "70355"),
-      Episode::new("S01E48", "Mechanical Plague", "70355"),
-      Episode::new("S01E49", "Trapped", "70355"),
-      Episode::new("S01E50", "Lion-O's Anointment Fourth Day: The Trial of Mind Power", "70355"),
-      Episode::new("S01E51", "Excalibur", "70355"),
-      Episode::new("S01E52", "Secret of the Ice King", "70355"),
-      Episode::new("S01E53", "Good and Ugly", "70355"),
-      Episode::new("S01E54", "The Transfer", "70355"),
-      Episode::new("S01E55", "Divide and Conquer", "70355"),
-      Episode::new("S01E56", "Dream Master", "70355"),
-      Episode::new("S01E57", "Out of Sight", "70355"),
-      Episode::new("S01E58", "The Mountain", "70355"),
-      Episode::new("S01E59", "The Superpower Potion", "70355"),
-      Episode::new("S01E60", "Eye of the Beholder", "70355"),
-      Episode::new("S01E61", "Lion-O's Anointment Final Day: The Trial of Evil", "70355"),
-      Episode::new("S01E62", "The Trouble with ThunderKittens", "70355"),
-      Episode::new("S01E63",  "Mumm-Rana",  "70355"),
-      Episode::new("S01E64",  "The Shifter",  "70355"),
-      Episode::new("S01E65",  "Fond Memories",  "70355"),
+      Episode::new("S05E01", "Murdoch of the Klondike", "81670"),
+      Episode::new("S05E02", "Back and to the Left", "81670"),
+      Episode::new("S05E03", "Evil Eye of Egypt", "81670"),
+      Episode::new("S05E04", "War on Terror", "81670"),
+      Episode::new("S05E05", "Murdoch at the Opera", "81670"),
+      Episode::new("S05E06", "Who Killed the Electric Carriage?", "81670"),
+      Episode::new("S05E07", "Stroll on the Wild Side (1)", "81670"),
+      Episode::new("S05E08", "Stroll on the Wild Side (2)", "81670"),
+      Episode::new("S05E09", "Invention Convention", "81670"),
+      Episode::new("S05E10", "Staircase to Heaven", "81670"),
+      Episode::new("S05E11", "Murdoch in Toyland", "81670"),
+      Episode::new("S05E12", "Murdoch Night in Canada", "81670"),
+      Episode::new("S05E13", "Twentieth Century Murdoch", "81670"),
     ];
 
   let mut dirs: Vec<FileNameAndExt> = WalkDir::new(working_dir)

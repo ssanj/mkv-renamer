@@ -1,8 +1,18 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
+use serde::Deserialize;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+pub struct Series {
+  name: String,
+  season: String,
+  tvdbId: String,
+  episodes: Vec<Episode>
+}
+
+
+#[derive(Debug, Deserialize)]
 pub struct Episode {
   number: String,
   description: String,
