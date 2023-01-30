@@ -12,7 +12,29 @@ mod cli;
 
 fn main() {
   let config = get_cli_args();
-  println!("config: {:?}", config)
+  println!("config: {:?}", config);
+  let config_file = config.config_file;
+  let dvd_rips_directory = config.dvd_rips;
+  let renames_directory = config.renames_directory;
+
+  let config_file_path = Path::new(&config_file);
+  let dvd_rips_directory_path = Path::new(&dvd_rips_directory);
+  let renames_directory_path = Path::new(&renames_directory);
+
+  if !(config_file_path.exists() && dvd_rips_directory_path.exists() && renames_directory_path.exists()) {
+      println!("One or more supplied file paths do not exist:");
+      print_error_if_file_not_found("config_file", config_file_path);
+      print_error_if_file_not_found("dvd_rips_directory", dvd_rips_directory_path);
+      print_error_if_file_not_found("renames_directory", renames_directory_path)
+  } else {
+    println!("done")
+  }
+}
+
+fn print_error_if_file_not_found(name: &str, p: &Path) {
+  if !p.exists() {
+    println!(" - Path for {} does not exist: {:?}", name, p)
+  }
 }
 
 fn program() {

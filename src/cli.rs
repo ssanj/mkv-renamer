@@ -6,7 +6,15 @@ pub struct Args {
 
   /// The location of series configuration file
   #[clap(short, long, value_parser)]
-  config_file: String
+  pub config_file: String,
+
+  /// The location of .mkv to be renamed
+  #[clap(short, long, value_parser)]
+  pub dvd_rips: String,
+
+  /// The location where the renamed files are written to
+  #[clap(short, long, value_parser)]
+  pub renames_directory: String
 }
 
 
