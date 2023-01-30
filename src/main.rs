@@ -1,12 +1,13 @@
 use walkdir::WalkDir;
 
 
-use std::io::BufRead;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::fs;
 use models::*;
 use cli::*;
 use regex::Regex;
+use std::error::Error;
 
 mod models;
 mod cli;
@@ -32,7 +33,9 @@ fn main() {
   } else {
     let series_metadata = get_series_metadata(EpisodeGuide(series_metadata_path.to_owned()));
     println!("metadata: {:?}", series_metadata);
-    println!("done")
+
+    let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
+    println!("episode definition: {:?}", episodes_definition);
   }
 }
 
@@ -74,7 +77,7 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
       .filter_map(|dir_entry| {
         let p = dir_entry.path();
         let is_file = p.is_file();
-        let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disk");
+        let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disc");
         if is_file && has_disk_subdirectory {
           p.file_name().and_then(|name|{
             p.extension().map(|ext| FileNameAndExt::new(p, name, ext))  // Some(FileNameAndExt)
@@ -147,4 +150,11 @@ fn perform_rename(renames: &[Rename]) {
   for r in renames {
     fs::rename(&r.from_file_name, &r.to_file_name).expect(&format!("could not rename {:?} -> {:?}", &r.from_file_name, &r.to_file_name))
   }
+}
+
+fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition, Box<dyn Error>> {
+  let file = fs::File::open(path)?;
+  let reader = BufReader::new(file);
+  let u = serde_json::from_reader(reader)?;
+  Ok(u)
 }

@@ -3,16 +3,9 @@ use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
-pub struct Series {
-  name: String,
-  season: String,
-  tvdbId: String,
-  episodes: Vec<Episode>
-}
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub struct Episode {
   number: String,
   description: String,
@@ -88,4 +81,16 @@ pub struct SeriesMetaData {
   pub name: String,
   pub tvdb_id: String,
   pub season_number: String,
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct EpisodesDefinition {
+  pub episodes: Vec<EpisodeDefinition>
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EpisodeDefinition {
+  pub number: String,
+  pub name: String,
 }
