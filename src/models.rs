@@ -82,3 +82,10 @@ pub struct EpisodeGuide(pub PathBuf);
 
 #[derive(Debug)]
 pub struct RenamesDir(pub PathBuf);
+
+#[derive(Debug)]
+pub struct SeriesMetaData {
+  pub name: String,
+  pub tvdb_id: String,
+  pub season_number: String,
+}

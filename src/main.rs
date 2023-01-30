@@ -6,10 +6,13 @@ use std::path::Path;
 use std::fs;
 use models::*;
 use cli::*;
+use regex::Regex;
 
 mod models;
 mod cli;
 
+
+//cargo run -- -c /Users/sanj/ziptemp/renaming/series/murdoch-mysteries-81670/season-5.json -d /Volumes/MediaDrive/TV_Rips -r /Volumes/MediaDrive/TV
 fn main() {
   let config = get_cli_args();
   println!("config: {:?}", config);
@@ -27,6 +30,8 @@ fn main() {
       print_error_if_file_not_found("dvd_rips_directory", dvd_rips_directory_path);
       print_error_if_file_not_found("renames_directory", renames_directory_path)
   } else {
+    let series_metadata = get_series_metadata(EpisodeGuide(config_file_path.to_owned()));
+    println!("metadata: {:?}", series_metadata);
     println!("done")
   }
 }
@@ -37,7 +42,8 @@ fn print_error_if_file_not_found(name: &str, p: &Path) {
   }
 }
 
-fn program(dvd_rips: &DvdRipsDir, renames_dir: &RenamesDir) {
+fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir: &RenamesDir) {
+
   // TODO: Pass this in
   let dvd_rips_directory =  &dvd_rips.0; //"/Volumes/MediaDrive/TV_Rips"; //current dir
 
@@ -119,6 +125,22 @@ fn program(dvd_rips: &DvdRipsDir, renames_dir: &RenamesDir) {
       _ => println!("aborting rename")
     }
   }
+}
+
+fn get_series_metadata(episode_guide: EpisodeGuide) -> SeriesMetaData {
+  let metadata_regx = Regex::new(r"^.*/series/(?P<SERIES>.+)-(?P<TVDB>\d{5,})/season\-(?P<SEASON>\d+)\.json$").unwrap();
+
+  let file_name = episode_guide.0.to_string_lossy().to_string();
+  let captured =
+    metadata_regx
+      .captures(&file_name)
+      .expect(&format!("Could not find captures in file path and name: {}.\nExpected file name config: <RENAMER_HOME>/series/SERIES_NAME-TVDBID/season-SEASON_NUMBER.json\nExample: /home/someone/.renamer/series/murdoch-mysteries-81670/season-1.json", file_name));
+
+  let series = captured.name("SERIES").expect("Could not find series name in file name").as_str();
+  let tvdb = captured.name("TVDB").expect("Could not find tvdb id  in file name").as_str();
+  let season = captured.name("SEASON").expect("Could not find season number in file name").as_str();
+
+  SeriesMetaData { name: series.to_owned(), tvdb_id: tvdb.to_owned(), season_number: season.to_owned() }
 }
 
 fn perform_rename(renames: &[Rename]) {
