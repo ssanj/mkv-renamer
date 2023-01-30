@@ -36,8 +36,22 @@ fn main() {
 
     let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
     println!("episode definition: {:?}", episodes_definition);
+
+    let episodes = definitions_to_episodes(episodes_definition, &series_metadata);
+    println!("episodes: {:?}", episodes)
   }
 }
+
+fn definitions_to_episodes(episodes_definition: EpisodesDefinition, series_metadata: &SeriesMetaData) -> Vec<Episode>{
+  episodes_definition
+    .episodes
+    .into_iter()
+    .map(|ed| {
+      Episode::new(&ed.number, &ed.name, &series_metadata.tvdb_id)
+    })
+    .collect()
+}
+
 
 fn print_error_if_file_not_found(name: &str, p: &Path) {
   if !p.exists() {
@@ -45,31 +59,10 @@ fn print_error_if_file_not_found(name: &str, p: &Path) {
   }
 }
 
-fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir: &RenamesDir) {
+fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir: &RenamesDir, episodes: &Vec<Episode>) {
 
-  // TODO: Pass this in
   let dvd_rips_directory =  &dvd_rips.0; //"/Volumes/MediaDrive/TV_Rips"; //current dir
-
-  // TODO: Pass this in
   let renames_directory = &renames_dir.0;//"/Volumes/MediaDrive/TV";
-
-  // TODO: Pass this in via config file or read it from TVDB
-  let episode_names =
-    vec![
-      Episode::new("S05E01", "Murdoch of the Klondike", "81670"),
-      Episode::new("S05E02", "Back and to the Left", "81670"),
-      Episode::new("S05E03", "Evil Eye of Egypt", "81670"),
-      Episode::new("S05E04", "War on Terror", "81670"),
-      Episode::new("S05E05", "Murdoch at the Opera", "81670"),
-      Episode::new("S05E06", "Who Killed the Electric Carriage?", "81670"),
-      Episode::new("S05E07", "Stroll on the Wild Side (1)", "81670"),
-      Episode::new("S05E08", "Stroll on the Wild Side (2)", "81670"),
-      Episode::new("S05E09", "Invention Convention", "81670"),
-      Episode::new("S05E10", "Staircase to Heaven", "81670"),
-      Episode::new("S05E11", "Murdoch in Toyland", "81670"),
-      Episode::new("S05E12", "Murdoch Night in Canada", "81670"),
-      Episode::new("S05E13", "Twentieth Century Murdoch", "81670"),
-    ];
 
   let mut dirs: Vec<FileNameAndExt> = WalkDir::new(dvd_rips_directory)
       .into_iter()
@@ -90,8 +83,8 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
 
   dirs.sort_by(|fne1, fne2| fne1.partial_cmp(&fne2).unwrap());
 
-  if dirs.len() > episode_names.len() {
-    println!("Not enough Episode names ({}) to match actual files extracted ({})", episode_names.len(), dirs.len());
+  if dirs.len() > episodes.len() {
+    println!("Not enough Episode names ({}) to match actual files extracted ({})", episodes.len(), dirs.len());
     println!("Make sure you have the same number of episode names as extracted files (or more)");
     println!("Aborting!!!");
   } else {
@@ -100,7 +93,7 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
         .into_iter()
         .enumerate()
         .map(|(i, fne)|{
-          let episode = episode_names.get(i).expect(&format!("could not read episode_names index: {}", i));
+          let episode = episodes.get(i).expect(&format!("could not read episodes index: {}", i));
           let file_name_with_ext = format!("{}.{}",episode, fne.ext);
           let output_file_path = renames_directory.join(file_name_with_ext);
           let path_to_output_file = output_file_path.to_path_buf();
