@@ -12,7 +12,7 @@ mod models;
 mod cli;
 
 
-//cargo run -- -c /Users/sanj/ziptemp/renaming/series/murdoch-mysteries-81670/season-5.json -d /Volumes/MediaDrive/TV_Rips -r /Volumes/MediaDrive/TV
+//cargo run -- -s /Users/sanj/ziptemp/renaming/series/murdoch-mysteries-81670/season-5.json -d /Volumes/MediaDrive/TV_Rips -r /Volumes/MediaDrive/TV
 fn main() {
   let config = get_cli_args();
   println!("config: {:?}", config);
