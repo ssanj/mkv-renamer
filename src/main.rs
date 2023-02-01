@@ -38,7 +38,12 @@ fn main() {
     println!("episode definition: {:?}", episodes_definition);
 
     let episodes = definitions_to_episodes(episodes_definition, &series_metadata);
-    println!("episodes: {:?}", episodes)
+    println!("episodes: {:?}", episodes);
+
+    let dvd_rips_directory = DvdRipsDir(dvd_rips_directory_path.to_path_buf());
+    let renames_directory = RenamesDir(renames_directory_path.to_path_buf());
+
+    program(&series_metadata, &dvd_rips_directory, &renames_directory, &episodes)
   }
 }
 
@@ -117,7 +122,7 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
     let line = user_response.lines().next().expect("Could not extract line from buffer"); // Unexpected, so throw
 
     match line {
-      "y" => perform_rename(&files_to_rename),
+      "y" => perform_rename(series_metadata, &files_to_rename),
       _ => println!("aborting rename")
     }
   }
@@ -139,7 +144,12 @@ fn get_series_metadata(episode_guide: EpisodeGuide) -> SeriesMetaData {
   SeriesMetaData { name: series.to_owned(), tvdb_id: tvdb.to_owned(), season_number: season.to_owned() }
 }
 
-fn perform_rename(renames: &[Rename]) {
+fn perform_rename(_series_metadata: &SeriesMetaData, renames: &[Rename]) {
+  //create parent directories
+
+  //Destination directory format: Series Name - {tvdb-TVDBID}/Season 0X/
+  //Fail if it exists? If so how can we support partial rips?
+
   for r in renames {
     fs::rename(&r.from_file_name, &r.to_file_name).expect(&format!("could not rename {:?} -> {:?}", &r.from_file_name, &r.to_file_name))
   }
