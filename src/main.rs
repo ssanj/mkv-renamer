@@ -2,7 +2,7 @@ use walkdir::WalkDir;
 
 
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs;
 use models::*;
 use cli::*;
@@ -16,7 +16,6 @@ mod cli;
 //cargo run -- -s /Users/sanj/ziptemp/renaming/series/murdoch-mysteries-81670/season-5.json -d /Volumes/MediaDrive/TV_Rips -r /Volumes/MediaDrive/TV
 fn main() {
   let config = get_cli_args();
-  println!("config: {:?}", config);
   let series_metadata_file = config.series_metadata;
   let dvd_rips_directory = config.dvd_rips;
   let renames_directory = config.renames_directory;
@@ -32,13 +31,9 @@ fn main() {
       print_error_if_file_not_found("renames_directory", renames_directory_path)
   } else {
     let series_metadata = get_series_metadata(EpisodeGuide(series_metadata_path.to_owned()));
-    println!("metadata: {:?}", series_metadata);
 
     let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
-    println!("episode definition: {:?}", episodes_definition);
-
     let episodes = definitions_to_episodes(episodes_definition, &series_metadata);
-    println!("episodes: {:?}", episodes);
 
     let dvd_rips_directory = DvdRipsDir(dvd_rips_directory_path.to_path_buf());
     let renames_directory = RenamesDir(renames_directory_path.to_path_buf());
@@ -93,6 +88,8 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
     println!("Make sure you have the same number of episode names as extracted files (or more)");
     println!("Aborting!!!");
   } else {
+    let series_directory = get_series_directory(renames_directory, series_metadata);
+    let series_directory_path = series_directory.as_path();
     let files_to_rename: Vec<_> =
       dirs
         .into_iter()
@@ -100,7 +97,7 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
         .map(|(i, fne)|{
           let episode = episodes.get(i).expect(&format!("could not read episodes index: {}", i));
           let file_name_with_ext = format!("{}.{}",episode, fne.ext);
-          let output_file_path = renames_directory.join(file_name_with_ext);
+          let output_file_path = series_directory_path.join(file_name_with_ext).to_path_buf();
           let path_to_output_file = output_file_path.to_path_buf();
           Rename::new(fne.path, path_to_output_file)
         })
@@ -111,7 +108,6 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
     for f in &files_to_rename {
       println!("{:?} -> {:?}", f.from_file_name, f.to_file_name)
     }
-
     println!("");
 
     println!("Proceed with rename? 'y' to proceed or any other key to abort");
@@ -122,10 +118,26 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
     let line = user_response.lines().next().expect("Could not extract line from buffer"); // Unexpected, so throw
 
     match line {
-      "y" => perform_rename(series_metadata, &files_to_rename),
+      "y" => {
+        create_all_directories(series_directory_path).expect(&format!("Could not create series directory: {}", series_directory_path.to_string_lossy()));
+        perform_rename(&files_to_rename)
+      },
       _ => println!("aborting rename")
     }
   }
+}
+
+fn create_all_directories(p: &Path) -> std::io::Result<()> {
+  fs::create_dir_all(p)
+}
+
+fn get_series_directory(renames_directory: &PathBuf, series_metadata: &SeriesMetaData) -> PathBuf {
+  use convert_case::{Case, Casing};
+  let series_name =  series_metadata.name.to_case(Case::Title);
+  let tvdb_id = &series_metadata.tvdb_id;
+  let season = format!("{}", series_metadata.season_number);
+  let parent_dirs = format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season);
+  renames_directory.as_path().join(parent_dirs).to_path_buf()
 }
 
 fn get_series_metadata(episode_guide: EpisodeGuide) -> SeriesMetaData {
@@ -144,12 +156,7 @@ fn get_series_metadata(episode_guide: EpisodeGuide) -> SeriesMetaData {
   SeriesMetaData { name: series.to_owned(), tvdb_id: tvdb.to_owned(), season_number: season.to_owned() }
 }
 
-fn perform_rename(_series_metadata: &SeriesMetaData, renames: &[Rename]) {
-  //create parent directories
-
-  //Destination directory format: Series Name - {tvdb-TVDBID}/Season 0X/
-  //Fail if it exists? If so how can we support partial rips?
-
+fn perform_rename(renames: &[Rename]) {
   for r in renames {
     fs::rename(&r.from_file_name, &r.to_file_name).expect(&format!("could not rename {:?} -> {:?}", &r.from_file_name, &r.to_file_name))
   }
