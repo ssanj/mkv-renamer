@@ -127,8 +127,14 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
   }
 }
 
+// Fails if the directory already exists
 fn create_all_directories(p: &Path) -> std::io::Result<()> {
-  fs::create_dir_all(p)
+  // We want to fail if the directory already exists
+  if !p.exists() {
+    fs::create_dir_all(p)
+  } else {
+    Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Series directory already exists: {}. Aborting", p.to_string_lossy())))
+  }
 }
 
 fn get_series_directory(renames_directory: &PathBuf, series_metadata: &SeriesMetaData) -> PathBuf {
