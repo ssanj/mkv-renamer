@@ -76,7 +76,7 @@ pub struct EpisodeGuide(pub PathBuf);
 #[derive(Debug)]
 pub struct RenamesDir(pub PathBuf);
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct SeriesMetaData {
   pub name: String,
   pub tvdb_id: String,
@@ -86,6 +86,7 @@ pub struct SeriesMetaData {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct EpisodesDefinition {
+  pub metadata: SeriesMetaData,
   pub episodes: Vec<EpisodeDefinition>
 }
 

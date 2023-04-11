@@ -178,12 +178,19 @@ fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition
 
 #[cfg(test)]
 mod tests {
+    use std::fs::Metadata;
+
     use super::*;
     use pretty_assertions::assert_eq;
 
     #[test]
     fn test_episode_deserialization() {
       let conf = r#"{
+        "metadata": {
+          "name":"Thundercats",
+          "tvdb_id":"70355",
+          "season_number":"1"
+        },
         "episodes": [
           { "number":"S01E01", "name":"Exodus"},
           { "number":"S01E02", "name":"The Unholy Alliance"},
@@ -224,6 +231,11 @@ mod tests {
 
       let expected_episodes_definition =
         EpisodesDefinition {
+          metadata: SeriesMetaData {
+            name: "Thundercats".to_string(),
+            tvdb_id: "70355".to_string(),
+            season_number: "1".to_string()
+          },
           episodes: expected_episodes
         };
 
