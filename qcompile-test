@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cargo watch -x 'test --no-run  -q --message-format json-diagnostic-rendered-ansi | quiet --errors 1'

@@ -174,3 +174,26 @@ fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition
   let u = serde_json::from_reader(reader)?;
   Ok(u)
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_episode_deserialization() {
+      let conf = r#"{
+      "episodes": [
+          { "number":"S01E01", "name":"Exodus"},
+          { "number":"S01E02", "name":"The Unholy Alliance"},
+          { "number":"S01E03", "name":"Berbils"},
+          { "number":"S01E04", "name":"The Slaves of Castle Plun-Darr"},
+          { "number":"S01E05", "name":"Pumm-Ra"},
+          { "number":"S01E06", "name":"The Terror of Hammerhand"}
+      ]
+}"#;
+
+      let episodes: EpisodesDefinition = serde_json::from_str(conf).unwrap();
+      assert_eq!(episodes.episodes.iter().count(), 6)
+    }
+}

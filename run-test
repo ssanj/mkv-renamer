@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  cargo watch -x test
+else
+  cargo watch -x 'test '"$1"''
+fi
+
+
