@@ -1,32 +1,7 @@
-use std::fmt;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use serde::Deserialize;
 
-
-
-#[derive(Debug)]
-pub struct Episode {
-  number: String,
-  description: String,
-  tvdb: String,
-}
-
-impl fmt::Display for Episode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} - {} {{tvdb-{}}}", self.number, self.description, self.tvdb)
-    }
-}
-
-impl Episode {
-  pub fn new(num: &str, desc: &str, tv: &str) -> Self {
-    Self {
-      number: num.to_owned(),
-      description: desc.to_owned(),
-      tvdb: tv.to_owned()
-    }
-  }
-}
 
 #[derive(Debug)]
 pub struct Rename {

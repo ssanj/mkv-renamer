@@ -1,20 +1,16 @@
 use walkdir::WalkDir;
 
-
-use std::alloc::System;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::fs;
 use models::*;
 use cli::*;
-use regex::Regex;
 use std::error::Error;
 
 mod models;
 mod cli;
 
 
-//cargo run -- -s /Users/sanj/ziptemp/renaming/series/murdoch-mysteries-81670/season-5.json -d /Volumes/MediaDrive/TV_Rips -r /Volumes/MediaDrive/TV
 fn main() {
   let config = get_cli_args();
   let series_metadata_file = config.series_metadata;
@@ -28,27 +24,11 @@ fn main() {
       print_error_if_file_not_found("series_metadata", series_metadata_path);
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
-    // let series_metadata = get_series_metadata(EpisodeGuide(series_metadata_path.to_owned()));
-
     let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
-    // let episodes = definitions_to_episodes(episodes_definition, &series_metadata);
-
     let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
-
     program(&processing_dir, &episodes_definition)
   }
 }
-
-// fn definitions_to_episodes(episodes_definition: EpisodesDefinition, series_metadata: &SeriesMetaData) -> Vec<Episode>{
-//   episodes_definition
-//     .episodes
-//     .into_iter()
-//     .map(|ed| {
-//       Episode::new(&ed.number, &ed.name, &series_metadata.tvdb_id)
-//     })
-//     .collect()
-// }
-
 
 fn print_error_if_file_not_found(name: &str, p: &Path) {
   if !p.exists() {
@@ -152,21 +132,6 @@ fn get_series_directory(encodes_dir: &EncodesDir, series_metadata: &SeriesMetaDa
   encodes_dir.0.join(series_folder_structure) //TODO: Fix - we should expose the PathBuf internals
 }
 
-// fn get_series_metadata(episode_guide: EpisodeGuide) -> SeriesMetaData {
-//   let metadata_regx = Regex::new(r"^.*/series/(?P<SERIES>.+)-(?P<TVDB>\d{5,})/season\-(?P<SEASON>\d+)\.json$").unwrap();
-
-//   let file_name = episode_guide.0.to_string_lossy().to_string();
-//   let captured =
-//     metadata_regx
-//       .captures(&file_name)
-//       .expect(&format!("Could not find captures in file path and name: {}.\nExpected file name config: <RENAMER_HOME>/series/SERIES_NAME-TVDBID/season-SEASON_NUMBER.json\nExample: /home/someone/.renamer/series/murdoch-mysteries-81670/season-1.json", file_name));
-
-//   let series = captured.name("SERIES").expect("Could not find series name in file name").as_str();
-//   let tvdb = captured.name("TVDB").expect("Could not find tvdb id  in file name").as_str();
-//   let season = captured.name("SEASON").expect("Could not find season number in file name").as_str();
-
-//   SeriesMetaData { name: series.to_owned(), tvdb_id: tvdb.to_owned(), season_number: season.to_owned() }
-// }
 
 fn perform_rename(renames: &[Rename]) {
   for r in renames {
