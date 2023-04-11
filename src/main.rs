@@ -1,6 +1,7 @@
 use walkdir::WalkDir;
 
 
+use std::alloc::System;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -17,40 +18,36 @@ mod cli;
 fn main() {
   let config = get_cli_args();
   let series_metadata_file = config.series_metadata;
-  let dvd_rips_directory = config.dvd_rips;
-  let renames_directory = config.renames_directory;
+  let processing_dir = config.processing_dir;
 
   let series_metadata_path = Path::new(&series_metadata_file);
-  let dvd_rips_directory_path = Path::new(&dvd_rips_directory);
-  let renames_directory_path = Path::new(&renames_directory);
+  let processing_dir_path = Path::new(&processing_dir);
 
-  if !(series_metadata_path.exists() && dvd_rips_directory_path.exists() && renames_directory_path.exists()) {
+  if !(series_metadata_path.exists() && processing_dir_path.exists()) {
       println!("One or more supplied file paths do not exist:");
       print_error_if_file_not_found("series_metadata", series_metadata_path);
-      print_error_if_file_not_found("dvd_rips_directory", dvd_rips_directory_path);
-      print_error_if_file_not_found("renames_directory", renames_directory_path)
+      print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
-    let series_metadata = get_series_metadata(EpisodeGuide(series_metadata_path.to_owned()));
+    // let series_metadata = get_series_metadata(EpisodeGuide(series_metadata_path.to_owned()));
 
     let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
-    let episodes = definitions_to_episodes(episodes_definition, &series_metadata);
+    // let episodes = definitions_to_episodes(episodes_definition, &series_metadata);
 
-    let dvd_rips_directory = DvdRipsDir(dvd_rips_directory_path.to_path_buf());
-    let renames_directory = RenamesDir(renames_directory_path.to_path_buf());
+    let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
 
-    program(&series_metadata, &dvd_rips_directory, &renames_directory, &episodes)
+    program(&processing_dir, &episodes_definition)
   }
 }
 
-fn definitions_to_episodes(episodes_definition: EpisodesDefinition, series_metadata: &SeriesMetaData) -> Vec<Episode>{
-  episodes_definition
-    .episodes
-    .into_iter()
-    .map(|ed| {
-      Episode::new(&ed.number, &ed.name, &series_metadata.tvdb_id)
-    })
-    .collect()
-}
+// fn definitions_to_episodes(episodes_definition: EpisodesDefinition, series_metadata: &SeriesMetaData) -> Vec<Episode>{
+//   episodes_definition
+//     .episodes
+//     .into_iter()
+//     .map(|ed| {
+//       Episode::new(&ed.number, &ed.name, &series_metadata.tvdb_id)
+//     })
+//     .collect()
+// }
 
 
 fn print_error_if_file_not_found(name: &str, p: &Path) {
@@ -59,10 +56,12 @@ fn print_error_if_file_not_found(name: &str, p: &Path) {
   }
 }
 
-fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir: &RenamesDir, episodes: &Vec<Episode>) {
-
-  let dvd_rips_directory =  &dvd_rips.0; //"/Volumes/MediaDrive/TV_Rips"; //current dir
-  let renames_directory = &renames_dir.0;//"/Volumes/MediaDrive/TV";
+fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinition) {
+  let episodes = &episodes_definition.episodes;
+  let series_metadata = &episodes_definition.metadata;
+  let dvd_rips_directory = processing_dir.rips_dir() ;
+  let renames_directory = processing_dir.renames_dir();
+  let encodes_directory = processing_dir.encodes_dir();
 
   let mut dirs: Vec<FileNameAndExt> = WalkDir::new(dvd_rips_directory)
       .into_iter()
@@ -81,28 +80,35 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
      })
     .collect();
 
+
+  // Sort disk file names in ascending order
   dirs.sort_by(|fne1, fne2| fne1.partial_cmp(&fne2).unwrap());
 
+
+  // We have more extracted episodes than episode names in the metadata. Abort.
   if dirs.len() > episodes.len() {
     println!("Not enough Episode names ({}) to match actual files extracted ({})", episodes.len(), dirs.len());
     println!("Make sure you have the same number of episode names as extracted files (or more)");
     println!("Aborting!!!");
   } else {
-    let series_directory = get_series_directory(renames_directory, series_metadata);
-    let series_directory_path = series_directory.as_path();
+    let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
+    let encoded_series_directory_path = encoded_series_directory.as_path();
+
+    let renames_dir_path = renames_directory.0.as_path();
+
     let files_to_rename: Vec<_> =
       dirs
         .into_iter()
         .enumerate()
         .map(|(i, fne)|{
           let episode = episodes.get(i).expect(&format!("could not read episodes index: {}", i));
-          let file_name_with_ext = format!("{}.{}",episode, fne.ext);
-          let output_file_path = series_directory_path.join(file_name_with_ext).to_path_buf();
+          let file_name_with_ext = format!("{} - {}.{}", episode.number, episode.name, fne.ext);
+          // let output_file_path = series_directory_path.join(file_name_with_ext).to_path_buf();
+          let output_file_path = renames_dir_path.join(file_name_with_ext).to_path_buf();
           let path_to_output_file = output_file_path.to_path_buf();
           Rename::new(fne.path, path_to_output_file)
         })
         .collect();
-
 
     println!("The following renames will be performed:");
     for f in &files_to_rename {
@@ -119,8 +125,8 @@ fn program(series_metadata: &SeriesMetaData, dvd_rips: &DvdRipsDir, renames_dir:
 
     match line {
       "y" => {
-        create_all_directories(series_directory_path).expect(&format!("Could not create series directory: {}", series_directory_path.to_string_lossy()));
-        perform_rename(&files_to_rename)
+        perform_rename(&files_to_rename);
+        create_all_directories(encoded_series_directory_path).expect(&format!("Could not create encoded series directory: {}", encoded_series_directory_path.to_string_lossy()));
       },
       _ => println!("aborting rename")
     }
@@ -137,30 +143,30 @@ fn create_all_directories(p: &Path) -> std::io::Result<()> {
   }
 }
 
-fn get_series_directory(renames_directory: &PathBuf, series_metadata: &SeriesMetaData) -> PathBuf {
+fn get_series_directory(encodes_dir: &EncodesDir, series_metadata: &SeriesMetaData) -> PathBuf {
   use convert_case::{Case, Casing};
   let series_name =  series_metadata.name.to_case(Case::Title);
   let tvdb_id = &series_metadata.tvdb_id;
   let season = format!("{}", series_metadata.season_number);
-  let parent_dirs = format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season);
-  renames_directory.as_path().join(parent_dirs).to_path_buf()
+  let series_folder_structure = format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season);
+  encodes_dir.0.join(series_folder_structure) //TODO: Fix - we should expose the PathBuf internals
 }
 
-fn get_series_metadata(episode_guide: EpisodeGuide) -> SeriesMetaData {
-  let metadata_regx = Regex::new(r"^.*/series/(?P<SERIES>.+)-(?P<TVDB>\d{5,})/season\-(?P<SEASON>\d+)\.json$").unwrap();
+// fn get_series_metadata(episode_guide: EpisodeGuide) -> SeriesMetaData {
+//   let metadata_regx = Regex::new(r"^.*/series/(?P<SERIES>.+)-(?P<TVDB>\d{5,})/season\-(?P<SEASON>\d+)\.json$").unwrap();
 
-  let file_name = episode_guide.0.to_string_lossy().to_string();
-  let captured =
-    metadata_regx
-      .captures(&file_name)
-      .expect(&format!("Could not find captures in file path and name: {}.\nExpected file name config: <RENAMER_HOME>/series/SERIES_NAME-TVDBID/season-SEASON_NUMBER.json\nExample: /home/someone/.renamer/series/murdoch-mysteries-81670/season-1.json", file_name));
+//   let file_name = episode_guide.0.to_string_lossy().to_string();
+//   let captured =
+//     metadata_regx
+//       .captures(&file_name)
+//       .expect(&format!("Could not find captures in file path and name: {}.\nExpected file name config: <RENAMER_HOME>/series/SERIES_NAME-TVDBID/season-SEASON_NUMBER.json\nExample: /home/someone/.renamer/series/murdoch-mysteries-81670/season-1.json", file_name));
 
-  let series = captured.name("SERIES").expect("Could not find series name in file name").as_str();
-  let tvdb = captured.name("TVDB").expect("Could not find tvdb id  in file name").as_str();
-  let season = captured.name("SEASON").expect("Could not find season number in file name").as_str();
+//   let series = captured.name("SERIES").expect("Could not find series name in file name").as_str();
+//   let tvdb = captured.name("TVDB").expect("Could not find tvdb id  in file name").as_str();
+//   let season = captured.name("SEASON").expect("Could not find season number in file name").as_str();
 
-  SeriesMetaData { name: series.to_owned(), tvdb_id: tvdb.to_owned(), season_number: season.to_owned() }
-}
+//   SeriesMetaData { name: series.to_owned(), tvdb_id: tvdb.to_owned(), season_number: season.to_owned() }
+// }
 
 fn perform_rename(renames: &[Rename]) {
   for r in renames {

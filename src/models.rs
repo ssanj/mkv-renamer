@@ -68,13 +68,46 @@ impl PartialOrd for FileNameAndExt {
 
 
 #[derive(Debug)]
-pub struct DvdRipsDir(pub PathBuf);
+pub struct RipsDir(pub PathBuf);
+
+impl AsRef<Path> for RipsDir {
+    fn as_ref(&self) -> &Path {
+      self.0.as_path()
+    }
+}
 
 #[derive(Debug)]
 pub struct EpisodeGuide(pub PathBuf);
 
 #[derive(Debug)]
+pub struct EncodesDir(pub PathBuf);
+
+impl AsRef<Path> for EncodesDir {
+    fn as_ref(&self) -> &Path {
+      self.0.as_path()
+    }
+}
+
+
+#[derive(Debug)]
 pub struct RenamesDir(pub PathBuf);
+
+#[derive(Debug)]
+pub struct ProcessingDir(pub PathBuf);
+
+impl ProcessingDir {
+  pub fn rips_dir(&self) -> RipsDir {
+    RipsDir(self.0.join("Rips"))
+  }
+
+  pub fn renames_dir(&self) -> RenamesDir {
+    RenamesDir(self.0.join("Renames"))
+  }
+
+  pub fn encodes_dir(&self) -> EncodesDir {
+    EncodesDir(self.0.join("Encodes"))
+  }
+}
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct SeriesMetaData {

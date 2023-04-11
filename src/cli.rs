@@ -1,21 +1,19 @@
 use clap::Parser;
 
+/// Rename TV series rips from optical media
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about)]
 pub struct Args {
 
-  /// The location of series metadata file
-  /// Format: <SERIES>/SERIES_NAME-TVDBID/season-<SEASON_NUM>.json
+  /// The location of series metadata file.
+  /// An example format can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/sample.conf
   #[clap(short, long, value_parser)]
   pub series_metadata: String,
 
-  /// The location of .mkv to be renamed
+  /// The location of the processing directory (PD).
+  /// Structure: PD/{Rips, Renames, Encodes}
   #[clap(short, long, value_parser)]
-  pub dvd_rips: String,
-
-  /// The location where the renamed files are written to
-  #[clap(short, long, value_parser)]
-  pub renames_directory: String
+  pub processing_dir: String,
 }
 
 
