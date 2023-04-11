@@ -179,6 +179,7 @@ fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_episode_deserialization() {
@@ -193,7 +194,40 @@ mod tests {
         ]
       }"#;
 
-      let episodes: EpisodesDefinition = serde_json::from_str(conf).unwrap();
-      assert_eq!(episodes.episodes.iter().count(), 6)
+      let expected_episodes =
+        vec![
+          EpisodeDefinition {
+            number:"S01E01".to_string(),
+            name:"Exodus".to_string()
+          },
+          EpisodeDefinition {
+            number:"S01E02".to_string(),
+            name:"The Unholy Alliance".to_string()
+          },
+          EpisodeDefinition {
+            number:"S01E03".to_string(),
+            name:"Berbils".to_string()
+          },
+          EpisodeDefinition {
+            number:"S01E04".to_string(),
+            name:"The Slaves of Castle Plun-Darr".to_string()
+          },
+          EpisodeDefinition {
+            number:"S01E05".to_string(),
+            name:"Pumm-Ra".to_string()
+          },
+          EpisodeDefinition {
+            number:"S01E06".to_string(),
+            name:"The Terror of Hammerhand".to_string()
+          }
+        ];
+
+      let expected_episodes_definition =
+        EpisodesDefinition {
+          episodes: expected_episodes
+        };
+
+      let episodes_definition: EpisodesDefinition = serde_json::from_str(conf).unwrap();
+      assert_eq!(episodes_definition, expected_episodes_definition)
     }
 }

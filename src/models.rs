@@ -84,12 +84,12 @@ pub struct SeriesMetaData {
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct EpisodesDefinition {
   pub episodes: Vec<EpisodeDefinition>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct EpisodeDefinition {
   pub number: String,
   pub name: String,
