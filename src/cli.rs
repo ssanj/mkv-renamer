@@ -1,6 +1,6 @@
 use clap::Parser;
 
-/// Rename TV series rips from optical media
+/// Rename TV series ripped from optical media
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about)]
 pub struct Args {

@@ -37,37 +37,20 @@ fn print_error_if_file_not_found(name: &str, p: &Path) {
 }
 
 fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinition) {
-  let episodes = &episodes_definition.episodes;
+  let metadata_episodes = &episodes_definition.episodes;
   let series_metadata = &episodes_definition.metadata;
-  let dvd_rips_directory = processing_dir.rips_dir() ;
+  let rips_directory = processing_dir.rips_dir() ;
   let renames_directory = processing_dir.renames_dir();
   let encodes_directory = processing_dir.encodes_dir();
 
-  let mut dirs: Vec<FileNameAndExt> = WalkDir::new(dvd_rips_directory)
-      .into_iter()
-      .filter_map(|re| re.ok())
-      .filter_map(|dir_entry| {
-        let p = dir_entry.path();
-        let is_file = p.is_file();
-        let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disc");
-        if is_file && has_disk_subdirectory {
-          p.file_name().and_then(|name|{
-            p.extension().map(|ext| FileNameAndExt::new(p, name, ext))  // Some(FileNameAndExt)
-          })
-        } else {
-          None
-        }
-     })
-    .collect();
-
-
+  let mut ripped_episode_filenames = get_ripped_episode_filenames(&rips_directory);
   // Sort disk file names in ascending order
-  dirs.sort_by(|fne1, fne2| fne1.partial_cmp(&fne2).unwrap());
+  ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(&fne2).unwrap());
 
 
   // We have more extracted episodes than episode names in the metadata. Abort.
-  if dirs.len() > episodes.len() {
-    println!("Not enough Episode names ({}) to match actual files extracted ({})", episodes.len(), dirs.len());
+  if ripped_episode_filenames.len() > metadata_episodes.len() {
+    println!("Not enough Episode names ({}) to match actual files extracted ({})", metadata_episodes.len(), ripped_episode_filenames.len());
     println!("Make sure you have the same number of episode names as extracted files (or more)");
     println!("Aborting!!!");
   } else {
@@ -77,11 +60,11 @@ fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinit
     let renames_dir_path = renames_directory.0.as_path();
 
     let files_to_rename: Vec<_> =
-      dirs
+      ripped_episode_filenames
         .into_iter()
         .enumerate()
         .map(|(i, fne)|{
-          let episode = episodes.get(i).expect(&format!("could not read episodes index: {}", i));
+          let episode = metadata_episodes.get(i).expect(&format!("could not read metadata_episodes index: {}", i));
           let file_name_with_ext = format!("{} - {}.{}", episode.number, episode.name, fne.ext);
           // let output_file_path = series_directory_path.join(file_name_with_ext).to_path_buf();
           let output_file_path = renames_dir_path.join(file_name_with_ext).to_path_buf();
@@ -111,6 +94,25 @@ fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinit
       _ => println!("aborting rename")
     }
   }
+}
+
+fn get_ripped_episode_filenames(rips_dir: &RipsDir) -> Vec<FileNameAndExt> {
+  WalkDir::new(rips_dir)
+      .into_iter()
+      .filter_map(|re| re.ok())
+      .filter_map(|dir_entry| {
+        let p = dir_entry.path();
+        let is_file = p.is_file();
+        let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disc");
+        if is_file && has_disk_subdirectory {
+          p.file_name().and_then(|name|{
+            p.extension().map(|ext| FileNameAndExt::new(p, name, ext))  // Some(FileNameAndExt)
+          })
+        } else {
+          None
+        }
+     })
+    .collect()
 }
 
 // Fails if the directory already exists
