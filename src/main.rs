@@ -48,51 +48,21 @@ fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinit
   ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(&fne2).unwrap());
 
 
-  // We have more extracted episodes than episode names in the metadata. Abort.
+  // We have more ripped episodes than metadata episode names. Abort.
   if ripped_episode_filenames.len() > metadata_episodes.len() {
-    println!("Not enough Episode names ({}) to match actual files extracted ({})", metadata_episodes.len(), ripped_episode_filenames.len());
-    println!("Make sure you have the same number of episode names as extracted files (or more)");
+    println!("Not enough metadata episode names ({}) to match ripped files ({})", metadata_episodes.len(), ripped_episode_filenames.len());
+    println!("Make sure you have the same number of metadata episode names as ripped files (or more)");
     println!("Aborting!!!");
+    std::process::exit(1)
   } else {
     let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
     let encoded_series_directory_path = encoded_series_directory.as_path();
 
-    let renames_dir_path = renames_directory.0.as_path();
+    let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
-    let files_to_rename: Vec<_> =
-      ripped_episode_filenames
-        .into_iter()
-        .enumerate()
-        .map(|(i, fne)|{
-          let episode = metadata_episodes.get(i).expect(&format!("could not read metadata_episodes index: {}", i));
-          let file_name_with_ext = format!("{} - {}.{}", episode.number, episode.name, fne.ext);
-          // let output_file_path = series_directory_path.join(file_name_with_ext).to_path_buf();
-          let output_file_path = renames_dir_path.join(file_name_with_ext).to_path_buf();
-          let path_to_output_file = output_file_path.to_path_buf();
-          Rename::new(fne.path, path_to_output_file)
-        })
-        .collect();
-
-    println!("The following renames will be performed:");
-    for f in &files_to_rename {
-      println!("{:?} -> {:?}", f.from_file_name, f.to_file_name)
-    }
-    println!("");
-
-    println!("Proceed with rename? 'y' to proceed or any other key to abort");
-    let mut user_response = String::new();
-    let stdin = std::io::stdin();
-    let mut handle = stdin.lock();
-    handle.read_line(&mut user_response).expect("Could not read from stdin"); // Unexpected, so throw
-    let line = user_response.lines().next().expect("Could not extract line from buffer"); // Unexpected, so throw
-
-    match line {
-      "y" => {
-        perform_rename(&files_to_rename);
-        create_all_directories(encoded_series_directory_path).expect(&format!("Could not create encoded series directory: {}", encoded_series_directory_path.to_string_lossy()));
-      },
-      _ => println!("aborting rename")
-    }
+    let renames_result = confirm_renames(&files_to_rename);
+    handle_renames_result(&renames_result, &files_to_rename);
+    create_series_season_directories(encoded_series_directory_path);
   }
 }
 
@@ -113,6 +83,59 @@ fn get_ripped_episode_filenames(rips_dir: &RipsDir) -> Vec<FileNameAndExt> {
         }
      })
     .collect()
+}
+
+fn get_files_to_rename(ripped_episode_filenames: &Vec<FileNameAndExt>, metadata_episodes: &Vec<EpisodeDefinition>, renames_dir: &RenamesDir) -> Vec<Rename> {
+  let renames_dir_path = renames_dir.0.as_path(); // TODO: Don't expose internals
+
+  ripped_episode_filenames
+    .into_iter()
+    .enumerate()
+    .map(|(i, fne)|{
+      let episode = metadata_episodes.get(i).expect(&format!("could not read metadata_episodes index: {}", i));
+      let file_name_with_ext = format!("{} - {}.{}", episode.number, episode.name, fne.ext);
+
+      let output_file_path = renames_dir_path.join(file_name_with_ext).to_path_buf();
+      let path_to_output_file = output_file_path.to_path_buf();
+      Rename::new(fne.clone().path, path_to_output_file)
+    })
+    .collect()
+}
+
+fn confirm_renames(files_to_rename: &Vec<Rename>) -> RenamesResult {
+  println!("The following renames will be performed:");
+
+  for f in files_to_rename {
+    println!("{:?} -> {:?}", f.from_file_name, f.to_file_name)
+  }
+
+  println!("");
+  println!("Proceed with rename? 'y' to proceed or any other key to abort");
+
+  let mut user_response = String::new();
+  let stdin = std::io::stdin();
+  let mut handle = stdin.lock();
+  handle.read_line(&mut user_response).expect("Could not read from stdin"); // Unexpected, so throw
+  let line = user_response.lines().next().expect("Could not extract line from buffer"); // Unexpected, so throw
+
+  match line {
+    "y" => RenamesResult::Correct,
+    _ => RenamesResult::Wrong
+  }
+}
+
+fn handle_renames_result(rename_result: &RenamesResult, files_to_rename: &Vec<Rename>) {
+  match rename_result {
+    RenamesResult::Correct => perform_rename(&files_to_rename),
+    RenamesResult::Wrong => {
+      println!("Aborting rename");
+      std::process::exit(1)
+    }
+  }
+}
+
+fn create_series_season_directories(encoded_series_directory_path: &Path) {
+  create_all_directories(encoded_series_directory_path).expect(&format!("Could not create encoded series directory: {}", encoded_series_directory_path.to_string_lossy()));
 }
 
 // Fails if the directory already exists
@@ -151,7 +174,6 @@ fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition
 
 #[cfg(test)]
 mod tests {
-    use std::fs::Metadata;
 
     use super::*;
     use pretty_assertions::assert_eq;

@@ -18,7 +18,7 @@ impl Rename {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FileNameAndExt {
   pub path: PathBuf,
   pub file_name: String,
@@ -102,4 +102,10 @@ pub struct EpisodesDefinition {
 pub struct EpisodeDefinition {
   pub number: String,
   pub name: String,
+}
+
+
+pub enum RenamesResult {
+  Correct,
+  Wrong
 }
