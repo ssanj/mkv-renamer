@@ -84,7 +84,7 @@ impl ProcessingDir {
   }
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct SeriesMetaData {
   pub name: String,
   pub tvdb_id: String,

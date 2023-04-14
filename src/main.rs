@@ -107,7 +107,7 @@ fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinit
 
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
-    let renames_result = confirm_renames(&files_to_rename);
+    let renames_result = confirm_changes(&files_to_rename, &encoded_series_directory_path);
     handle_renames_result(&renames_result, &files_to_rename);
     create_series_season_directories(encoded_series_directory_path);
   }
@@ -149,15 +149,19 @@ fn get_files_to_rename(ripped_episode_filenames: &Vec<FileNameAndExt>, metadata_
     .collect()
 }
 
-fn confirm_renames(files_to_rename: &Vec<Rename>) -> RenamesResult {
+fn confirm_changes(files_to_rename: &Vec<Rename>, encodes_series_folder_structure: &Path) -> RenamesResult {
   println!("The following renames will be performed:");
 
   for f in files_to_rename {
     println!("{:?} -> {:?}", f.from_file_name, f.to_file_name)
   }
-
   println!("");
-  println!("Proceed with rename? 'y' to proceed or any other key to abort");
+
+  println!("The following directory will be created:");
+  println!("{}", encodes_series_folder_structure.to_string_lossy().to_string());
+  println!("");
+
+  println!("Proceed? 'y' to proceed or any other key to abort");
 
   let mut user_response = String::new();
   let stdin = std::io::stdin();
@@ -169,6 +173,13 @@ fn confirm_renames(files_to_rename: &Vec<Rename>) -> RenamesResult {
     "y" => RenamesResult::Correct,
     _ => RenamesResult::Wrong
   }
+}
+
+fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
+  let series_name = series_metadata.name.clone();
+  let tvdb_id = series_metadata.tvdb_id.clone();
+  let season_number = series_metadata.season_number.clone();
+  format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season_number)
 }
 
 fn handle_renames_result(rename_result: &RenamesResult, files_to_rename: &Vec<Rename>) {
@@ -196,11 +207,7 @@ fn create_all_directories(p: &Path) -> std::io::Result<()> {
 }
 
 fn get_series_directory(encodes_dir: &EncodesDir, series_metadata: &SeriesMetaData) -> PathBuf {
-  use convert_case::{Case, Casing};
-  let series_name =  series_metadata.name.to_case(Case::Title);
-  let tvdb_id = &series_metadata.tvdb_id;
-  let season = format!("{}", series_metadata.season_number);
-  let series_folder_structure = format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season);
+  let series_folder_structure = get_series_folder_structure(&series_metadata);
   encodes_dir.0.join(series_folder_structure) //TODO: Fix - we should expose the PathBuf internals
 }
 
