@@ -120,5 +120,5 @@ fn get_season_number(episodes: &[EpisodeDefinition]) -> String {
         })
         .unwrap();
 
-      format!("{}", season_number.parse::<u8>().unwrap())
+      format!("{}", season_number.parse::<u8>().unwrap()) // 01 -> 1
 }

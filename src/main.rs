@@ -39,8 +39,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir) -> Result<(), Box<dyn std::error::Error>> {
   let page_content = download_metadata(url).await?;
-  let episodesDefinition = get_series_metadata(&page_content);
-  println!("{:?}", episodesDefinition);
+  let episodes_definition = get_series_metadata(&page_content);
+
+  let processing_dir_path = processing_dir.0.as_path(); // TODO: Do not exposed internals
+  if !processing_dir_path.exists() { // TODO: Handle processing validation in a common place
+      println!("Processing directory does not exist:");
+      print_error_if_file_not_found("processing_dir", processing_dir_path);
+  } else {
+    program(&processing_dir, &episodes_definition)
+  }
+
   Ok(())
 }
 
