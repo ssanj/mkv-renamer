@@ -10,13 +10,13 @@ use std::error::Error;
 mod models;
 mod cli;
 
-
+#[allow(unreachable_code)]
 fn main() {
   let config = get_cli_args();
-  let series_metadata_file = config.series_metadata;
+  let series_metadata_file: &Path = todo!();//config.series_metadata;
   let processing_dir = config.processing_dir;
 
-  let series_metadata_path = Path::new(&series_metadata_file);
+  let series_metadata_path: &Path = todo!();//Path::new(&series_metadata_file);
   let processing_dir_path = Path::new(&processing_dir);
 
   if !(series_metadata_path.exists() && processing_dir_path.exists()) {
