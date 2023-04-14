@@ -7,6 +7,7 @@ pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
   let rowSelector = Selector::parse("tbody tr").unwrap();
   let columnSelector = Selector::parse("td").unwrap();
   let anchorSelector = Selector::parse("a").unwrap();
+  let tvidSelector = Selector::parse(r#"div[class="btn-group"]"#).unwrap();
 
   let title =
     document
@@ -24,7 +25,33 @@ pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
       )
       .unwrap();
 
-  let episodes =
+  let tvid =
+    document
+      .select(&tvidSelector)
+      .collect::<Vec<_>>()
+      .first()
+      .and_then(|e|{
+        e
+          .value()
+          .attr("data-permission")
+          .clone()
+      })
+      .unwrap();
+
+    // expected format: series-TVDBID-artwork
+  let splits: Vec<_> =
+    tvid
+      .split('-')
+      .collect();
+
+  let tvdb_id =
+    splits
+      .get(1) // get the second element
+      .clone()
+      .unwrap()
+      .to_string();
+
+  let episodes: Vec<EpisodeDefinition> =
     document
       .select(&rowSelector)
       .map(|row_fragment|{
@@ -63,15 +90,35 @@ pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
       }).
       collect();
 
+    let season_number = get_season_number(&episodes);
+
     let metadata =
       SeriesMetaData {
         name: title,
-        tvdb_id: "xyz".to_string(), //TODO: Ask for TVDB Id from user
-        season_number: "whatever".to_string(), // TODO: Try and glean this information from the html
+        tvdb_id,
+        season_number
       };
 
     EpisodesDefinition {
         metadata: metadata,
         episodes,
     }
+}
+
+fn get_season_number(episodes: &[EpisodeDefinition]) -> String {
+  let season_number: String =
+      episodes
+        .first()
+        .map(|e| {
+          e
+            .number
+            .chars()
+            .into_iter()
+            .take_while(|c| c.ne(&'E')) // Given: S01E02, take everything up to the E: S01
+            .skip_while(|c| c.is_alphabetic()) // Drop the S: 01
+            .collect()
+        })
+        .unwrap();
+
+      format!("{}", season_number.parse::<u8>().unwrap())
 }
