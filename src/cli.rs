@@ -6,7 +6,7 @@ use clap::{Args, Parser};
 pub struct MkvRenamerArgs {
 
   #[command(flatten)]
-  pub series_metadata: MetadataInputType,
+  pub metadata_input_type: MetadataInputType,
 
   /// The location of the processing directory (PD).
   /// Structure: PD/{Rips, Renames, Encodes}
@@ -21,12 +21,12 @@ pub struct MetadataInputType {
     /// The url of TVDB season information.
     /// Example: https://thetvdb.com/series/thundercats/seasons/official/1
     #[arg(long, short, value_name = "url")]
-    url_metadata: Option<String>,
+    pub url_metadata: Option<String>,
 
     /// The location of series metadata file.
     /// An example format can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/sample.conf
     #[arg(long, short, value_name = "file")]
-    file_metadata: Option<String>,
+    pub file_metadata: Option<String>,
 }
 
 

@@ -9,24 +9,63 @@ use std::error::Error;
 
 mod models;
 mod cli;
+mod metadata_downloader;
+mod html_scraper;
 
-#[allow(unreachable_code)]
-fn main() {
+use html_scraper::get_series_metadata;
+use metadata_downloader::download_metadata;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let config = get_cli_args();
-  let series_metadata_file: &Path = todo!();//config.series_metadata;
   let processing_dir = config.processing_dir;
-
-  let series_metadata_path: &Path = todo!();//Path::new(&series_metadata_file);
   let processing_dir_path = Path::new(&processing_dir);
+  let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
+  let metadata_input_type = config.metadata_input_type;
 
-  if !(series_metadata_path.exists() && processing_dir_path.exists()) {
+  let metadata_type = get_metadata_type(&metadata_input_type);
+
+  match metadata_type {
+    ConfigMetadataInputType::Url(url) =>
+      handle_url_metadata(&url, &processing_dir).await?,
+    ConfigMetadataInputType::File(file) => {
+      let file_path = Path::new(&file);
+      handle_file_metadata(&file_path, &processing_dir)
+    }
+  }
+
+  Ok(())
+}
+
+async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir) -> Result<(), Box<dyn std::error::Error>> {
+  let page_content = download_metadata(url).await?;
+  let episodesDefinition = get_series_metadata(&page_content);
+  println!("{:?}", episodesDefinition);
+  Ok(())
+}
+
+fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir) {
+  let processing_dir_path = processing_dir.0.as_path(); // TODO: Do not exposed internals
+  if !(series_metadata_path.exists() && processing_dir_path.exists()) { // TODO: Handle processing validation in a common place
       println!("One or more supplied file paths do not exist:");
       print_error_if_file_not_found("series_metadata", series_metadata_path);
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
     let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
-    let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
     program(&processing_dir, &episodes_definition)
+  }
+}
+
+enum ConfigMetadataInputType {
+  Url(String),
+  File(String)
+}
+
+fn get_metadata_type(input_type: &MetadataInputType) -> ConfigMetadataInputType {
+  match (input_type.clone().url_metadata, input_type.clone().file_metadata) {
+    (Some(url), _) => ConfigMetadataInputType::Url(url),
+    (_, Some(file)) => ConfigMetadataInputType::File(file),
+    _ => panic!("Invalid metadata configuration: {:?}", input_type)
   }
 }
 
