@@ -14,6 +14,12 @@ When you rip TV series from optical media, the file names are not that of the ep
 1. disc3 -> `DVD_TS_01.mkv`, `DVD_TS_02.mkv`
 1. disc4 -> `DVD_TS_01.mkv`, `DVD_TS_02.mkv`
 
+### Output file name template for mkmkv
+
+```
+{NAME1}{-:CMNT1}{-:DT}{title:+DFLT}{-:SN}
+```
+
 Now if you want something like Plex to index these episodes correctly and download the appropriate art and metadata you need to follow certain [conventions](https://support.plex.tv/articles/naming-and-organizing-your-tv-show-files/). In addition if you tag the series with [The TVDB](https://thetvdb.com/) or [IMDB](https://www.imdb.com/) series ids, the index process is more accurate. I've chosen to use the TVDB ids in this case.
 
 The recommended format is:
@@ -51,7 +57,7 @@ Options:
           Print version
 ```
 
-You need to supplied a processing directory (see below), and some metadata about the series, either via a URL or a JSON file.
+You need to supply a processing directory (see below), and some metadata about the series, either via a URL or a JSON file.
 
 ## Folder structure of processing directory
 
@@ -60,34 +66,58 @@ Your processing directory (PD) should have the following structure:
 ```
 <PD>
   |- Rips
-      |- disc1
-      |- disc2
-      |- disc3
+      | sesson1
+        |- disc1
+        |- disc2
+        |- disc3
+        ..
+        |- discN
+        |- renames
+      | sesson2
+        |- disc1
+        |- disc2
+        |- disc3
+        ..
+        |- discN
+        |- renames
       ..
-      |- discn
-  |- Renames
+      | sessonN
+        |- disc1
+        |- disc2
+        |- disc3
+        ..
+        |- discn
+        |- renames
+
   |- Encodes
 ```
 
 You can create this folder structure by running the following in your processing directory:
 
 ```
-mkdir -p Rips/{disc1,disc2,disc3,disc4} Renames Encodes
+#!/bin/bash
+
+for SESSION in {1..5}; do mkdir -p Rips/session"$SESSION"/{disc1,disc2,disc3,disc4,renames}; done
+mkdir -p Encodes
 ```
 
 Change the number of disc folders to suit your needs.
 
 ### Rips
 
-The folder that contains all the disc subfolders. All rips will go into one of the disc**N** directories corresponding to the disc being ripped.
+The folder that contains all the disc subfolders. All rips will go into one of the session/disc**N** directories corresponding to the disc being ripped.
+
+### Session
+
+A series that you want to rip. Having a Session directory, allows for multiple series to be ripped and prepped for encoding at the same time. For example: Ripping a series with 5 seasons at the same time, where we season will be extracted into a corresponding sessionX/disc[1..N] directory.
 
 ### Renames
 
-Once you run mkv-renamer, the renamed files will be renamed/moved here from the `Rips` directory
+Once you run mkv-renamer, the renamed files from each session will be renamed/moved here from disc[1..N].
 
 ### Encodes
 
-The encodes directory is where the renamed files are encoded to. mkv-renamer will create a target folder of the format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`. When encoding the renamed files, choose this as the target folder.
+The encodes directory is where the renamed files are encoded to. mkv-renamer will create a target folder of the format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`. When encoding the renamed files, choose this as the target folder. This is common across all sessions and allows for easy copying from one source directory to your NAS or media server.
 
 ## Metadata
 

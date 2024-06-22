@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cargo watch -x 'clippy --message-format json-diagnostic-rendered-ansi 2>&1 | quiet --items 1 --show-warnings'

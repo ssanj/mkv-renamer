@@ -9,7 +9,12 @@ pub struct MkvRenamerArgs {
   pub metadata_input_type: MetadataInputType,
 
   /// The location of the processing directory (PD).
-  /// Structure: PD/{Rips, Renames, Encodes}
+  ///
+  /// Structure: PD/{Rips,Encodes}
+  ///
+  /// Structure: Rips/{session1,session2,sessionN}
+  ///
+  /// Structure: sessionX/{disc1,disc2,disc3,discN,renames}
   #[clap(short, long, value_parser)]
   pub processing_dir: String,
 }
