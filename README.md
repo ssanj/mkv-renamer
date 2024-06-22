@@ -14,7 +14,9 @@ When you rip TV series from optical media, the file names are not that of the ep
 1. disc3 -> `DVD_TS_01.mkv`, `DVD_TS_02.mkv`
 1. disc4 -> `DVD_TS_01.mkv`, `DVD_TS_02.mkv`
 
-### Output file name template for mkmkv
+### Output file name template for makeMKV
+
+This is the template format I use for rips:
 
 ```
 {NAME1}{-:CMNT1}{-:DT}{title:+DFLT}{-:SN}
