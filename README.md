@@ -14,13 +14,6 @@ When you rip TV series from optical media, the file names are not that of the ep
 1. disc3 -> `DVD_TS_01.mkv`, `DVD_TS_02.mkv`
 1. disc4 -> `DVD_TS_01.mkv`, `DVD_TS_02.mkv`
 
-### Output file name template for makeMKV
-
-This is the template format I use for rips:
-
-```
-{NAME1}{-:CMNT1}{-:DT}{title:+DFLT}{-:SN}
-```
 
 Now if you want something like Plex to index these episodes correctly and download the appropriate art and metadata you need to follow certain [conventions](https://support.plex.tv/articles/naming-and-organizing-your-tv-show-files/). In addition if you tag the series with [The TVDB](https://thetvdb.com/) or [IMDB](https://www.imdb.com/) series ids, the index process is more accurate. I've chosen to use the TVDB ids in this case.
 
@@ -36,8 +29,17 @@ For example:
 Band of Brothers {tvdb-74205}/Season 01/S01E01 - Currahee
 ```
 
-
 Renaming these sequential rips is tedious and error-prone - specially if you have a lot of discs. mkv-renamer hopes to make that process easier.
+
+### Output file name template for makeMKV
+
+This is the template format I use for rips:
+
+```
+{NAME1}{-:CMNT1}{-:DT}{title:+DFLT}{-:SN}
+```
+
+See [Default output file name template](https://forum.makemkv.com/forum/viewtopic.php?t=18313) for more details.
 
 ## Usage
 
