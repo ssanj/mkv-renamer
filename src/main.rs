@@ -1,11 +1,13 @@
 use walkdir::WalkDir;
-
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::fs;
+use std::error::Error;
+use console::{style, Style};
+
+
 use models::*;
 use cli::*;
-use std::error::Error;
 
 mod models;
 mod cli;
@@ -31,7 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ConfigMetadataInputType::File(file) => {
       let file_path = Path::new(&file);
       handle_file_metadata(&file_path, &processing_dir, &session_dir, config.verbose)
-    }
+    },
+    ConfigMetadataInputType::Invalid => eprintln!("{}", style(format!("Invalid metadata configuration: {:?}", metadata_input_type)).red())
   }
 
   Ok(())
@@ -43,7 +46,7 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
 
   let processing_dir_path = processing_dir.as_ref();
   if !processing_dir_path.exists() { // TODO: Handle processing validation in a common place
-      println!("Processing directory does not exist:");
+      eprintln!("{}", style("Processing directory does not exist:").red());
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
     program(&processing_dir, session_dir, &episodes_definition, verbose)
@@ -55,7 +58,7 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
 fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) {
   let processing_dir_path = processing_dir.as_ref();
   if !(series_metadata_path.exists() && processing_dir_path.exists()) { // TODO: Handle processing validation in a common place
-      println!("One or more supplied file paths do not exist:");
+      eprintln!("{}", style("One or more supplied file paths do not exist:").red());
       print_error_if_file_not_found("series_metadata", series_metadata_path);
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
@@ -66,20 +69,21 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
 
 enum ConfigMetadataInputType {
   Url(String),
-  File(String)
+  File(String),
+  Invalid
 }
 
 fn get_metadata_type(input_type: &MetadataInputType) -> ConfigMetadataInputType {
   match (input_type.clone().url_metadata, input_type.clone().file_metadata) {
     (Some(url), _) => ConfigMetadataInputType::Url(url),
     (_, Some(file)) => ConfigMetadataInputType::File(file),
-    _ => panic!("Invalid metadata configuration: {:?}", input_type)
+    _ => ConfigMetadataInputType::Invalid
   }
 }
 
 fn print_error_if_file_not_found(name: &str, p: &Path) {
   if !p.exists() {
-    println!(" - Path for {} does not exist: {:?}", name, p)
+    eprintln!("- {}", style(format!("Path for {} does not exist: {:?}", name, p)).yellow())
   }
 }
 
@@ -92,10 +96,13 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
   let encodes_directory = processing_dir.encodes_dir();
 
   if verbose {
-    println!("Processing Dir: {}", processing_dir.as_ref().to_string_lossy());
-    println!("Session Dir: {}", &processing_dir.rips_session_dir(&session_dir).as_ref().to_string_lossy());
-    println!("Rename Dir: {}", &processing_dir.rips_session_renames_dir(&session_dir).as_ref().to_string_lossy());
-    println!("Encode Dir: {}", &processing_dir.encodes_dir().as_ref().to_string_lossy());
+    let cyan = Style::new().cyan();
+    println!();
+    println!("{}: {} (Root directory)",  cyan.apply_to("processing dir"), processing_dir.as_ref().to_string_lossy());
+    println!("{}: {} (Contains disc1..N with .mkv files)", cyan.apply_to("session dir"), processing_dir.rips_session_dir(&session_dir).as_ref().to_string_lossy());
+    println!("{}: {} (Stores renamed episodes)", cyan.apply_to("rename dir"), processing_dir.rips_session_renames_dir(&session_dir).as_ref().to_string_lossy());
+    println!("{}: {} (Stores encoded episodes)", cyan.apply_to("encode dir"), processing_dir.encodes_dir().as_ref().to_string_lossy());
+    println!()
   }
 
   let mut ripped_episode_filenames = get_ripped_episode_filenames(&rips_directory);
@@ -105,9 +112,10 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
 
   // We have more ripped episodes than metadata episode names. Abort.
   if ripped_episode_filenames.len() > metadata_episodes.len() {
-    println!("Not enough metadata episode names ({}) to match ripped files ({})", metadata_episodes.len(), ripped_episode_filenames.len());
-    println!("Make sure you have the same number of metadata episode names as ripped files (or more)");
-    println!("Aborting!!!");
+    let red = Style::new().red();
+    eprintln!("{}", red.apply_to(format!("Not enough metadata episode names ({}) to match ripped files ({})", metadata_episodes.len(), ripped_episode_filenames.len())));
+    eprintln!("{}", red.apply_to("Make sure you have the same number of metadata episode names as ripped files (or more)"));
+    eprintln!("{}", red.apply_to("Aborting!!!"));
     std::process::exit(1)
   } else {
     let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
@@ -120,7 +128,7 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
       handle_renames_result(&renames_result, &files_to_rename);
       create_series_season_directories(encoded_series_directory_path);
     } else {
-      eprintln!("No files found to rename")
+      eprintln!("{}", style("No files found to rename").red())
     }
   }
 }
@@ -163,14 +171,15 @@ fn get_files_to_rename(ripped_episode_filenames: &Vec<FileNameAndExt>, metadata_
 
 fn confirm_changes(files_to_rename: &Vec<Rename>, encodes_series_folder_structure: &Path) -> RenamesResult {
   println!("The following renames will be performed:");
+  let yellow = Style::new().yellow();
 
   for f in files_to_rename {
-    println!("{:?} -> {:?}", f.from_file_name, f.to_file_name)
+    println!("{:?} -> {:?}", f.from_file_name, yellow.apply_to(f.to_file_name.as_path().to_string_lossy()))
   }
   println!("");
 
   println!("The following directory will be created:");
-  println!("{}", encodes_series_folder_structure.to_string_lossy().to_string());
+  println!("{}", yellow.apply_to(encodes_series_folder_structure.to_string_lossy().to_string()));
   println!("");
 
   println!("Proceed? 'y' to proceed or any other key to abort");
