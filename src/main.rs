@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       handle_url_metadata(&url, &processing_dir, &session_dir, config.verbose).await?,
     ConfigMetadataInputType::File(file) => {
       let file_path = Path::new(&file);
-      handle_file_metadata(&file_path, &processing_dir, &session_dir, config.verbose)
+      handle_file_metadata(file_path, &processing_dir, &session_dir, config.verbose)
     },
     ConfigMetadataInputType::Invalid => eprintln!("{}", style(format!("Invalid metadata configuration: {:?}", metadata_input_type)).red())
   }
@@ -49,7 +49,7 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
       eprintln!("{}", style("Processing directory does not exist:").red());
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
-    program(&processing_dir, session_dir, &episodes_definition, verbose)
+    program(processing_dir, session_dir, &episodes_definition, verbose)
   }
 
   Ok(())
@@ -63,7 +63,7 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
     let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
-    program(&processing_dir, session_dir, &episodes_definition, verbose)
+    program(processing_dir, session_dir, &episodes_definition, verbose)
   }
 }
 
@@ -99,15 +99,15 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
     let cyan = Style::new().cyan();
     println!();
     println!("{}: {} (Root directory)",  cyan.apply_to("processing dir"), processing_dir.as_ref().to_string_lossy());
-    println!("{}: {} (Contains disc1..N with .mkv files)", cyan.apply_to("session dir"), processing_dir.rips_session_dir(&session_dir).as_ref().to_string_lossy());
-    println!("{}: {} (Stores renamed episodes)", cyan.apply_to("rename dir"), processing_dir.rips_session_renames_dir(&session_dir).as_ref().to_string_lossy());
+    println!("{}: {} (Contains disc1..N with .mkv files)", cyan.apply_to("session dir"), processing_dir.rips_session_dir(session_dir).as_ref().to_string_lossy());
+    println!("{}: {} (Stores renamed episodes)", cyan.apply_to("rename dir"), processing_dir.rips_session_renames_dir(session_dir).as_ref().to_string_lossy());
     println!("{}: {} (Stores encoded episodes)", cyan.apply_to("encode dir"), processing_dir.encodes_dir().as_ref().to_string_lossy());
     println!()
   }
 
   let mut ripped_episode_filenames = get_ripped_episode_filenames(&rips_directory);
   // Sort disk file names in ascending order
-  ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(&fne2).unwrap());
+  ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(fne2).unwrap());
 
 
   // We have more ripped episodes than metadata episode names. Abort.
@@ -124,7 +124,7 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
     if !files_to_rename.is_empty() {
-      let renames_result = confirm_changes(&files_to_rename, &encoded_series_directory_path);
+      let renames_result = confirm_changes(&files_to_rename, encoded_series_directory_path);
       handle_renames_result(&renames_result, &files_to_rename);
       create_series_season_directories(encoded_series_directory_path);
     } else {
@@ -152,14 +152,14 @@ fn get_ripped_episode_filenames(rips_session_dir: &RipsSessionDir) -> Vec<FileNa
     .collect()
 }
 
-fn get_files_to_rename(ripped_episode_filenames: &Vec<FileNameAndExt>, metadata_episodes: &Vec<EpisodeDefinition>, renames_dir: &RipsSessionRenamesDir) -> Vec<Rename> {
+fn get_files_to_rename(ripped_episode_filenames: &[FileNameAndExt], metadata_episodes: &[EpisodeDefinition], renames_dir: &RipsSessionRenamesDir) -> Vec<Rename> {
   let renames_dir_path = renames_dir.as_ref();
 
   ripped_episode_filenames
-    .into_iter()
+    .iter()
     .enumerate()
     .map(|(i, fne)|{
-      let episode = metadata_episodes.get(i).expect(&format!("could not read metadata_episodes index: {}", i));
+      let episode = metadata_episodes.get(i).unwrap_or_else(|| panic!("could not read metadata_episodes index: {}", i));
       let file_name_with_ext = format!("{} - {}.{}", episode.number, episode.name, fne.ext);
 
       let output_file_path = renames_dir_path.join(file_name_with_ext).to_path_buf();
@@ -176,11 +176,11 @@ fn confirm_changes(files_to_rename: &Vec<Rename>, encodes_series_folder_structur
   for f in files_to_rename {
     println!("{:?} -> {:?}", f.from_file_name, yellow.apply_to(f.to_file_name.as_path().to_string_lossy()))
   }
-  println!("");
+  println!();
 
   println!("The following directory will be created:");
   println!("{}", yellow.apply_to(encodes_series_folder_structure.to_string_lossy().to_string()));
-  println!("");
+  println!();
 
   println!("Proceed? 'y' to proceed or any other key to abort");
 
@@ -203,9 +203,9 @@ fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
   format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season_number)
 }
 
-fn handle_renames_result(rename_result: &RenamesResult, files_to_rename: &Vec<Rename>) {
+fn handle_renames_result(rename_result: &RenamesResult, files_to_rename: &[Rename]) {
   match rename_result {
-    RenamesResult::Correct => perform_rename(&files_to_rename),
+    RenamesResult::Correct => perform_rename(files_to_rename),
     RenamesResult::Wrong => {
       println!("Aborting rename");
       std::process::exit(1)
@@ -214,7 +214,7 @@ fn handle_renames_result(rename_result: &RenamesResult, files_to_rename: &Vec<Re
 }
 
 fn create_series_season_directories(encoded_series_directory_path: &Path) {
-  create_all_directories(encoded_series_directory_path).expect(&format!("Could not create encoded series directory: {}", encoded_series_directory_path.to_string_lossy()));
+  create_all_directories(encoded_series_directory_path).unwrap_or_else(|e| panic!("Could not create encoded series directory: {}, due to: {}", encoded_series_directory_path.to_string_lossy(), e));
 }
 
 // Fails if the directory already exists
@@ -228,14 +228,14 @@ fn create_all_directories(p: &Path) -> std::io::Result<()> {
 }
 
 fn get_series_directory(encodes_dir: &EncodesDir, series_metadata: &SeriesMetaData) -> PathBuf {
-  let series_folder_structure = get_series_folder_structure(&series_metadata);
-  encodes_dir.0.join(series_folder_structure) //TODO: Fix - we should expose the PathBuf internals
+  let series_folder_structure = get_series_folder_structure(series_metadata);
+  encodes_dir.join(series_folder_structure)
 }
 
 
 fn perform_rename(renames: &[Rename]) {
   for r in renames {
-    fs::rename(&r.from_file_name, &r.to_file_name).expect(&format!("could not rename {:?} -> {:?}", &r.from_file_name, &r.to_file_name))
+    fs::rename(&r.from_file_name, &r.to_file_name).unwrap_or_else(|e| panic!("could not rename {:?} -> {:?}, due to: {}", &r.from_file_name, &r.to_file_name, e))
   }
 }
 

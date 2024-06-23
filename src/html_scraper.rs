@@ -2,16 +2,16 @@ use crate::models::{EpisodesDefinition, EpisodeDefinition, SeriesMetaData};
 use scraper::{Html, Selector};
 
 pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
-  let document = Html::parse_document(&html);
-  let titleSelector = Selector::parse("title").unwrap();
-  let rowSelector = Selector::parse("tbody tr").unwrap();
-  let columnSelector = Selector::parse("td").unwrap();
-  let anchorSelector = Selector::parse("a").unwrap();
-  let tvidSelector = Selector::parse(r#"div[class="btn-group"]"#).unwrap();
+  let document = Html::parse_document(html);
+  let title_selector = Selector::parse("title").unwrap();
+  let row_selector = Selector::parse("tbody tr").unwrap();
+  let column_selector = Selector::parse("td").unwrap();
+  let anchor_selector = Selector::parse("a").unwrap();
+  let tvid_selector = Selector::parse(r#"div[class="btn-group"]"#).unwrap();
 
   let title =
     document
-      .select(&titleSelector)
+      .select(&title_selector)
       .collect::<Vec<_>>()
       .first()
       .and_then(|e|
@@ -27,14 +27,13 @@ pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
 
   let tvid =
     document
-      .select(&tvidSelector)
+      .select(&tvid_selector)
       .collect::<Vec<_>>()
       .first()
       .and_then(|e|{
         e
           .value()
           .attr("data-permission")
-          .clone()
       })
       .unwrap();
 
@@ -47,24 +46,23 @@ pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
   let tvdb_id =
     splits
       .get(1) // get the second element
-      .clone()
       .unwrap()
       .to_string();
 
   let episodes: Vec<EpisodeDefinition> =
     document
-      .select(&rowSelector)
+      .select(&row_selector)
       .map(|row_fragment|{
         let required_columns =
           row_fragment
-              .select(&columnSelector)
+              .select(&column_selector)
               .enumerate()
               .filter_map(|(index, column)|{
-                if index == (0 as usize) { // number
+                if index == 0 { // number
                   Option::Some(column.inner_html())
-                } else if index == (1 as usize) { // name, is within an <a href="">NAME</a>
+                } else if index == 1 { // name, is within an <a href="">NAME</a>
                   column
-                    .select(&anchorSelector)
+                    .select(&anchor_selector)
                     .map(|anchor|{
                        anchor.inner_html()
                     })
@@ -80,7 +78,7 @@ pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
               })
               .collect::<Vec<_>>();
 
-        let number = required_columns.get(0).expect("Could not get number from html").to_owned();
+        let number = required_columns.first().expect("Could not get number from html").to_owned();
         let name = required_columns.get(1).expect("Could not get name from html").to_owned();
 
         EpisodeDefinition {
@@ -100,7 +98,7 @@ pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
       };
 
     EpisodesDefinition {
-        metadata: metadata,
+        metadata,
         episodes,
     }
 }
@@ -113,7 +111,6 @@ fn get_season_number(episodes: &[EpisodeDefinition]) -> String {
           e
             .number
             .chars()
-            .into_iter()
             .take_while(|c| c.ne(&'E')) // Given: S01E02, take everything up to the E: S01
             .skip_while(|c| c.is_alphabetic()) // Drop the S: 01
             .collect()

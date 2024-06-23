@@ -66,6 +66,7 @@ impl AsRef<Path> for RipsSessionDir {
     }
 }
 
+#[allow(dead_code)]
 impl RipsSessionDir {
   pub fn join<P: AsRef<Path>>(&self, path: P) -> PathBuf {
     self.0.join(path)
@@ -86,6 +87,13 @@ pub struct EpisodeGuide(pub PathBuf);
 
 #[derive(Debug)]
 pub struct EncodesDir(pub PathBuf);
+
+impl EncodesDir {
+  pub fn join<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+    self.0.join(path)
+  }
+}
+
 
 impl AsRef<Path> for EncodesDir {
     fn as_ref(&self) -> &Path {
