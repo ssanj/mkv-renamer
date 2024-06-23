@@ -1,6 +1,6 @@
 use clap::{Args, Parser};
 
-/// Rename TV series ripped from optical media
+/// Rename TV series ripped from makeMKV
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about)]
 pub struct MkvRenamerArgs {
