@@ -41,7 +41,7 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir) -> Resul
   let page_content = download_metadata(url).await?;
   let episodes_definition = get_series_metadata(&page_content);
 
-  let processing_dir_path = processing_dir.0.as_path(); // TODO: Do not exposed internals
+  let processing_dir_path = processing_dir.as_ref();
   if !processing_dir_path.exists() { // TODO: Handle processing validation in a common place
       println!("Processing directory does not exist:");
       print_error_if_file_not_found("processing_dir", processing_dir_path);
@@ -53,7 +53,7 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir) -> Resul
 }
 
 fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir) {
-  let processing_dir_path = processing_dir.0.as_path(); // TODO: Do not exposed internals
+  let processing_dir_path = processing_dir.as_ref();
   if !(series_metadata_path.exists() && processing_dir_path.exists()) { // TODO: Handle processing validation in a common place
       println!("One or more supplied file paths do not exist:");
       print_error_if_file_not_found("series_metadata", series_metadata_path);

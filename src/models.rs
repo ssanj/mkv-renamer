@@ -84,6 +84,12 @@ impl ProcessingDir {
   }
 }
 
+impl AsRef<Path> for ProcessingDir {
+  fn as_ref(&self) -> &Path {
+    self.0.as_path()
+  }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct SeriesMetaData {
   pub name: String,
