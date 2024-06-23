@@ -18,26 +18,26 @@ use metadata_downloader::download_metadata;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let config = get_cli_args();
-  let processing_dir = config.processing_dir;
-  let processing_dir_path = Path::new(&processing_dir);
+  let processing_dir_path = Path::new(&config.processing_dir);
   let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
+  let session_dir = SessionDir::new(config.session_dir);
   let metadata_input_type = config.metadata_input_type;
 
   let metadata_type = get_metadata_type(&metadata_input_type);
 
   match metadata_type {
     ConfigMetadataInputType::Url(url) =>
-      handle_url_metadata(&url, &processing_dir).await?,
+      handle_url_metadata(&url, &processing_dir, &session_dir, config.verbose).await?,
     ConfigMetadataInputType::File(file) => {
       let file_path = Path::new(&file);
-      handle_file_metadata(&file_path, &processing_dir)
+      handle_file_metadata(&file_path, &processing_dir, &session_dir, config.verbose)
     }
   }
 
   Ok(())
 }
 
-async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir) -> Result<(), Box<dyn std::error::Error>> {
+async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
   let page_content = download_metadata(url).await?;
   let episodes_definition = get_series_metadata(&page_content);
 
@@ -46,13 +46,13 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir) -> Resul
       println!("Processing directory does not exist:");
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
-    program(&processing_dir, &episodes_definition)
+    program(&processing_dir, session_dir, &episodes_definition, verbose)
   }
 
   Ok(())
 }
 
-fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir) {
+fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) {
   let processing_dir_path = processing_dir.as_ref();
   if !(series_metadata_path.exists() && processing_dir_path.exists()) { // TODO: Handle processing validation in a common place
       println!("One or more supplied file paths do not exist:");
@@ -60,7 +60,7 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
       print_error_if_file_not_found("processing_dir", processing_dir_path);
   } else {
     let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
-    program(&processing_dir, &episodes_definition)
+    program(&processing_dir, session_dir, &episodes_definition, verbose)
   }
 }
 
@@ -83,12 +83,20 @@ fn print_error_if_file_not_found(name: &str, p: &Path) {
   }
 }
 
-fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinition) {
+fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_definition: &EpisodesDefinition, verbose: bool) {
   let metadata_episodes = &episodes_definition.episodes;
   let series_metadata = &episodes_definition.metadata;
-  let rips_directory = processing_dir.rips_dir() ;
-  let renames_directory = processing_dir.renames_dir();
+
+  let rips_directory = processing_dir.rips_session_dir(session_dir);
+  let renames_directory = processing_dir.rips_session_renames_dir(session_dir);
   let encodes_directory = processing_dir.encodes_dir();
+
+  if verbose {
+    println!("Processing Dir: {}", processing_dir.as_ref().to_string_lossy());
+    println!("Session Dir: {}", &processing_dir.rips_session_dir(&session_dir).as_ref().to_string_lossy());
+    println!("Rename Dir: {}", &processing_dir.rips_session_renames_dir(&session_dir).as_ref().to_string_lossy());
+    println!("Encode Dir: {}", &processing_dir.encodes_dir().as_ref().to_string_lossy());
+  }
 
   let mut ripped_episode_filenames = get_ripped_episode_filenames(&rips_directory);
   // Sort disk file names in ascending order
@@ -107,14 +115,18 @@ fn program(processing_dir: &ProcessingDir, episodes_definition: &EpisodesDefinit
 
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
-    let renames_result = confirm_changes(&files_to_rename, &encoded_series_directory_path);
-    handle_renames_result(&renames_result, &files_to_rename);
-    create_series_season_directories(encoded_series_directory_path);
+    if !files_to_rename.is_empty() {
+      let renames_result = confirm_changes(&files_to_rename, &encoded_series_directory_path);
+      handle_renames_result(&renames_result, &files_to_rename);
+      create_series_season_directories(encoded_series_directory_path);
+    } else {
+      eprintln!("No files found to rename")
+    }
   }
 }
 
-fn get_ripped_episode_filenames(rips_dir: &RipsDir) -> Vec<FileNameAndExt> {
-  WalkDir::new(rips_dir)
+fn get_ripped_episode_filenames(rips_session_dir: &RipsSessionDir) -> Vec<FileNameAndExt> {
+  WalkDir::new(rips_session_dir)
       .into_iter()
       .filter_map(|re| re.ok())
       .filter_map(|dir_entry| {
@@ -132,8 +144,8 @@ fn get_ripped_episode_filenames(rips_dir: &RipsDir) -> Vec<FileNameAndExt> {
     .collect()
 }
 
-fn get_files_to_rename(ripped_episode_filenames: &Vec<FileNameAndExt>, metadata_episodes: &Vec<EpisodeDefinition>, renames_dir: &RenamesDir) -> Vec<Rename> {
-  let renames_dir_path = renames_dir.0.as_path(); // TODO: Don't expose internals
+fn get_files_to_rename(ripped_episode_filenames: &Vec<FileNameAndExt>, metadata_episodes: &Vec<EpisodeDefinition>, renames_dir: &RipsSessionRenamesDir) -> Vec<Rename> {
+  let renames_dir_path = renames_dir.as_ref();
 
   ripped_episode_filenames
     .into_iter()

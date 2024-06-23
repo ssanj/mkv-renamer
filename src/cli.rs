@@ -8,7 +8,7 @@ pub struct MkvRenamerArgs {
   #[command(flatten)]
   pub metadata_input_type: MetadataInputType,
 
-  /// The location of the processing directory (PD).
+  /// The location of the processing directory (PD). See extended help for a full structure.
   ///
   /// Structure: PD/{Rips,Encodes}
   ///
@@ -17,6 +17,14 @@ pub struct MkvRenamerArgs {
   /// Structure: sessionX/{disc1,disc2,disc3,discN,renames}
   #[clap(short, long, value_parser)]
   pub processing_dir: String,
+
+  /// The session to use, accepts values from 1 to 100.
+  #[clap(short, long, value_parser=clap::value_parser!(u8).range(1..100))]
+  pub session_dir: u8,
+
+  /// Verbose logging
+  #[clap(long, value_parser)]
+  pub verbose: bool,
 }
 
 #[derive(Args, Clone, Debug)]
