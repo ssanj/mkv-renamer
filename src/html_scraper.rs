@@ -1,6 +1,9 @@
 use crate::models::{EpisodesDefinition, EpisodeDefinition, SeriesMetaData};
 use scraper::{Html, Selector};
 
+/// This whole class is pretty loose with the error handling
+/// If the HTML structure has changed, then we simply fail
+/// because this class will have to be rewritten to handle the new format
 pub fn get_series_metadata(html: &str) -> EpisodesDefinition {
   let document = Html::parse_document(html);
   let title_selector = Selector::parse("title").unwrap();
