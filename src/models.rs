@@ -3,8 +3,10 @@ use std::ffi::OsStr;
 
 mod dirs;
 mod episodes;
+mod errors;
 pub use dirs::*;
 pub use episodes::*;
+pub use errors::*;
 
 #[derive(Debug)]
 pub struct Rename {

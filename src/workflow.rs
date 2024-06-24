@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::error::Error;
-use console::{style, Style};
+use console::Style;
 
 use crate::html_scraper::get_series_metadata;
 use crate::metadata_downloader::download_metadata;
@@ -11,7 +11,7 @@ use crate::models::*;
 use crate::cli::*;
 
 
-pub async fn perform_workflow(config: MkvRenamerArgs) -> Result<(), Box<dyn Error>> {
+pub async fn perform_workflow(config: MkvRenamerArgs) -> R {
   let processing_dir_path = Path::new(&config.processing_dir);
   let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
   let session_dir = SessionDir::new(config.session_dir);
@@ -21,41 +21,37 @@ pub async fn perform_workflow(config: MkvRenamerArgs) -> Result<(), Box<dyn Erro
 
   match metadata_type {
     ConfigMetadataInputType::Url(url) =>
-      handle_url_metadata(&url, &processing_dir, &session_dir, config.verbose).await?,
+      handle_url_metadata(&url, &processing_dir, &session_dir, config.verbose).await,
     ConfigMetadataInputType::File(file) => {
       let file_path = Path::new(&file);
       handle_file_metadata(file_path, &processing_dir, &session_dir, config.verbose)
     },
-    ConfigMetadataInputType::Invalid => eprintln!("{}", style(format!("Invalid metadata configuration: {:?}", metadata_input_type)).red())
+    ConfigMetadataInputType::Invalid => Err(Box::new(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type))))
   }
-
-  Ok(())
 }
 
-async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> R {
   let page_content = download_metadata(url).await?;
   let episodes_definition = get_series_metadata(&page_content);
 
   let processing_dir_path = processing_dir.as_ref();
-  if !processing_dir_path.exists() { // TODO: Handle processing validation in a common place
-      eprintln!("{}", style("Processing directory does not exist:").red());
-      print_error_if_file_not_found("processing_dir", processing_dir_path);
+  if !processing_dir_path.exists() {
+      Err(Box::new(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned())))
   } else {
     program(processing_dir, session_dir, &episodes_definition, verbose)
   }
-
-  Ok(())
 }
 
-fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) {
+fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> R {
   let processing_dir_path = processing_dir.as_ref();
-  if !(series_metadata_path.exists() && processing_dir_path.exists()) { // TODO: Handle processing validation in a common place
-      eprintln!("{}", style("One or more supplied file paths do not exist:").red());
-      print_error_if_file_not_found("series_metadata", series_metadata_path);
-      print_error_if_file_not_found("processing_dir", processing_dir_path);
-  } else {
-    let episodes_definition = read_episodes_from_file(series_metadata_path).expect("Could not load episode definitions");
-    program(processing_dir, session_dir, &episodes_definition, verbose)
+  match (series_metadata_path.exists(), processing_dir_path.exists()) {
+      (true, true) => {
+        let episodes_definition = read_episodes_from_file(series_metadata_path)?;
+        program(processing_dir, session_dir, &episodes_definition, verbose)
+      },
+      (false, false) => Err(Box::new(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned()))),
+      (_, false) => Err(Box::new(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned()))),
+      (false, _) => Err(Box::new(RenamerError::MetadataDirectoryDoesNotExist(series_metadata_path.to_owned()))),
   }
 }
 
@@ -73,13 +69,8 @@ fn get_metadata_type(input_type: &MetadataInputType) -> ConfigMetadataInputType 
   }
 }
 
-fn print_error_if_file_not_found(name: &str, p: &Path) {
-  if !p.exists() {
-    eprintln!("- {}", style(format!("Path for {} does not exist: {:?}", name, p)).yellow())
-  }
-}
 
-fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_definition: &EpisodesDefinition, verbose: bool) {
+fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> R {
   let metadata_episodes = &episodes_definition.episodes;
   let series_metadata = &episodes_definition.metadata;
 
@@ -104,11 +95,7 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
 
   // We have more ripped episodes than metadata episode names. Abort.
   if ripped_episode_filenames.len() > metadata_episodes.len() {
-    let red = Style::new().red();
-    eprintln!("{}", red.apply_to(format!("Not enough metadata episode names ({}) to match ripped files ({})", metadata_episodes.len(), ripped_episode_filenames.len())));
-    eprintln!("{}", red.apply_to("Make sure you have the same number of metadata episode names as ripped files (or more)"));
-    eprintln!("{}", red.apply_to("Aborting!!!"));
-    std::process::exit(1)
+    Err(Box::new(RenamerError::NotEnoughMetadataForEpisodes(metadata_episodes.len(), ripped_episode_filenames.len())))
   } else {
     let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
     let encoded_series_directory_path = encoded_series_directory.as_path();
@@ -116,11 +103,10 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
     if !files_to_rename.is_empty() {
-      let renames_result = confirm_changes(&files_to_rename, encoded_series_directory_path);
-      handle_renames_result(&renames_result, &files_to_rename);
-      create_series_season_directories(encoded_series_directory_path);
+      handle_renames_result(&confirm_changes(&files_to_rename, encoded_series_directory_path), &files_to_rename);
+      create_series_season_directories(encoded_series_directory_path)
     } else {
-      eprintln!("{}", style("No files found to rename").red())
+      Err(Box::new(RenamerError::NoFilesToRename))
     }
   }
 }
@@ -199,23 +185,28 @@ fn handle_renames_result(rename_result: &RenamesResult, files_to_rename: &[Renam
   match rename_result {
     RenamesResult::Correct => perform_rename(files_to_rename),
     RenamesResult::Wrong => {
-      println!("Aborting rename");
+      println!("Aborting rename"); // TODO: Fix
       std::process::exit(1)
     }
   }
 }
 
-fn create_series_season_directories(encoded_series_directory_path: &Path) {
-  create_all_directories(encoded_series_directory_path).unwrap_or_else(|e| panic!("Could not create encoded series directory: {}, due to: {}", encoded_series_directory_path.to_string_lossy(), e));
+fn create_series_season_directories(encoded_series_directory_path: &Path) -> R {
+  create_all_directories(encoded_series_directory_path)
 }
 
 // Fails if the directory already exists
-fn create_all_directories(p: &Path) -> std::io::Result<()> {
+fn create_all_directories(p: &Path) -> R {
   // We want to fail if the directory already exists
   if !p.exists() {
     fs::create_dir_all(p)
+      .map_err(|e| {
+        let err: Box<dyn Error> =
+          Box::new(RenamerError::CouldNotCreatedSeriesDirectory(<Path as AsRef<Path>>::as_ref(p).to_owned(), e.to_string()));
+        err
+      })
   } else {
-    Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Series directory already exists: {}. Aborting", p.to_string_lossy())))
+    Err(Box::new(RenamerError::SeriesDirectoryAlreadyExists(p.to_owned())))
   }
 }
 
@@ -232,8 +223,11 @@ fn perform_rename(renames: &[Rename]) {
 }
 
 fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition, Box<dyn Error>> {
-  let file = fs::File::open(path)?;
+  let file = fs::File::open(&path)?;
   let reader = BufReader::new(file);
-  let u = serde_json::from_reader(reader)?;
+  let u =
+    serde_json::from_reader(reader)
+      .map_err(|e| Box::new(RenamerError::CouldNotDecodeEpisodeJson(path.as_ref().to_owned(), e.to_string())))?;
+
   Ok(u)
 }
