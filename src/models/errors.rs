@@ -7,6 +7,7 @@ pub enum RenamerError {
   InvalidMetadataConfiguration(String),
   CouldNotAccessMetadataURL(String, String),
   CouldNotDecodeMetadataBody(String, String),
+  CouldNotExportEpisodeMetadata(String, PathBuf, String),
   ProcessingDirectoryDoesNotExist(PathBuf),
   ProcessingDirAndMetadaPathDoesNotExit(PathBuf, PathBuf),
   MetadataDirectoryDoesNotExist(PathBuf),
@@ -25,7 +26,8 @@ impl fmt::Display for RenamerError {
       let error = match self {
         RenamerError::InvalidMetadataConfiguration(message) => format!("Invalid metadata configuration: {message}"),
         RenamerError::CouldNotAccessMetadataURL(url, message) => format!("Could not access metadata URL: {url}, due to: {message}"),
-        RenamerError::CouldNotDecodeMetadataBody(url, message) => format!("Could decode metadata body from URL: {url}, due to: {message}"),
+        RenamerError::CouldNotDecodeMetadataBody(url, message) => format!("Could not decode metadata body from URL: {url}, due to: {message}"),
+        RenamerError::CouldNotExportEpisodeMetadata(url, path, message) => format!("Could not export metadata from URL: {url} to file: {}, due to: {message}", path.to_string_lossy()),
         RenamerError::ProcessingDirectoryDoesNotExist(path) => format!("Processing directory does not exist: {}", path.to_string_lossy()),
         RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir, metadata_dir) => format!("Processing directory: {} and metadata path: {} does not exist", processing_dir.to_string_lossy(), metadata_dir.to_string_lossy()),
         RenamerError::MetadataDirectoryDoesNotExist(metadata_dir) => format!("Metadata path: {} does not exist", metadata_dir.to_string_lossy()),

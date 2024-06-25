@@ -8,6 +8,10 @@ pub struct MkvRenamerArgs {
   #[command(flatten)]
   pub metadata_input_type: MetadataInputType,
 
+  /// Export the metadata from the supplied URL.
+  #[clap(long, value_parser)]
+  pub export_only: Option<String>,
+
   /// The location of the processing directory (PD). See extended help for a full structure.
   ///
   /// Structure: PD/{Rips,Encodes}

@@ -1,5 +1,5 @@
 use walkdir::WalkDir;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::error::Error;
@@ -16,8 +16,9 @@ pub async fn perform_workflow(config: MkvRenamerArgs) -> ROutput {
   let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
   let session_dir = SessionDir::new(config.session_dir);
   let metadata_input_type = config.metadata_input_type;
+  let export_path = config.export_only.map(|p| Path::new(&p).to_owned());
 
-  let metadata_type = get_metadata_type(&metadata_input_type);
+  let metadata_type = get_metadata_type(&metadata_input_type, export_path);
 
   match metadata_type {
     ConfigMetadataInputType::Url(url) =>
@@ -26,8 +27,34 @@ pub async fn perform_workflow(config: MkvRenamerArgs) -> ROutput {
       let file_path = Path::new(&file);
       handle_file_metadata(file_path, &processing_dir, &session_dir, config.verbose)
     },
-    ConfigMetadataInputType::Invalid => Err(Box::new(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type))))
+    ConfigMetadataInputType::UrlExport(url, export_path) => handle_url_metadata_export(&url, export_path).await,
+    ConfigMetadataInputType::Invalid => Err(Box::new(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type)))),
   }
+}
+
+async fn handle_url_metadata_export(url: &str, export_path: PathBuf) -> ROutput {
+    let page_content = download_metadata(&url).await?;
+    let episodes_definition = get_series_metadata(&page_content);
+    use std::fs::OpenOptions;
+
+    OpenOptions::new()
+      .write(true)
+      .create_new(true)
+      .open(&export_path)
+      .map_err(|e| {
+        let err: Box<dyn Error> =
+          Box::new(RenamerError::CouldNotExportEpisodeMetadata(url.to_owned(), export_path.clone(), e.to_string()));
+        err
+      })
+      .and_then(|file| {
+        serde_json::to_writer_pretty(file, &episodes_definition)
+          .map_err(|e| {
+            let err: Box<dyn Error> =
+              Box::new(RenamerError::CouldNotExportEpisodeMetadata(url.to_owned(), export_path.clone(), e.to_string()));
+            err
+          })
+      })
+      .map(|_| Output::Success)
 }
 
 async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> ROutput {
@@ -58,13 +85,15 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
 enum ConfigMetadataInputType {
   Url(String),
   File(String),
+  UrlExport(String, PathBuf),
   Invalid
 }
 
-fn get_metadata_type(input_type: &MetadataInputType) -> ConfigMetadataInputType {
-  match (input_type.clone().url_metadata, input_type.clone().file_metadata) {
-    (Some(url), _) => ConfigMetadataInputType::Url(url),
-    (_, Some(file)) => ConfigMetadataInputType::File(file),
+fn get_metadata_type(input_type: &MetadataInputType, export_path: Option<PathBuf>) -> ConfigMetadataInputType {
+  match (input_type.clone().url_metadata, input_type.clone().file_metadata, export_path) {
+    (Some(url), _, Some(path)) => ConfigMetadataInputType::UrlExport(url, path),
+    (Some(url), _, None) => ConfigMetadataInputType::Url(url),
+    (_, Some(file), _) => ConfigMetadataInputType::File(file),
     _ => ConfigMetadataInputType::Invalid
   }
 }

@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct SeriesMetaData {
   pub name: String,
   pub tvdb_id: String,
@@ -8,13 +8,13 @@ pub struct SeriesMetaData {
 }
 
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct EpisodesDefinition {
   pub metadata: SeriesMetaData,
   pub episodes: Vec<EpisodeDefinition>
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct EpisodeDefinition {
   pub number: String,
   pub name: String,
