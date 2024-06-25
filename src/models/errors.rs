@@ -1,9 +1,6 @@
 use std::fmt;
-use std::error::Error;
 use std::path::PathBuf;
 use console::Style;
-
-pub type R = Result<(), Box<dyn Error>>;
 
 #[derive(Debug)]
 pub enum RenamerError {

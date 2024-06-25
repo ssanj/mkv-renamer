@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
@@ -7,6 +8,14 @@ mod errors;
 pub use dirs::*;
 pub use episodes::*;
 pub use errors::*;
+
+pub type R = Result<(), Box<dyn Error>>;
+pub type ROutput = Result<Output, Box<dyn Error>>;
+
+pub enum Output {
+  Success,
+  UserCanceled
+}
 
 #[derive(Debug)]
 pub struct Rename {

@@ -11,7 +11,7 @@ use crate::models::*;
 use crate::cli::*;
 
 
-pub async fn perform_workflow(config: MkvRenamerArgs) -> R {
+pub async fn perform_workflow(config: MkvRenamerArgs) -> ROutput {
   let processing_dir_path = Path::new(&config.processing_dir);
   let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
   let session_dir = SessionDir::new(config.session_dir);
@@ -30,7 +30,7 @@ pub async fn perform_workflow(config: MkvRenamerArgs) -> R {
   }
 }
 
-async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> R {
+async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> ROutput {
   let page_content = download_metadata(url).await?;
   let episodes_definition = get_series_metadata(&page_content);
 
@@ -42,7 +42,7 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
   }
 }
 
-fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> R {
+fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> ROutput {
   let processing_dir_path = processing_dir.as_ref();
   match (series_metadata_path.exists(), processing_dir_path.exists()) {
       (true, true) => {
@@ -70,7 +70,7 @@ fn get_metadata_type(input_type: &MetadataInputType) -> ConfigMetadataInputType 
 }
 
 
-fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> R {
+fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> ROutput {
   let metadata_episodes = &episodes_definition.episodes;
   let series_metadata = &episodes_definition.metadata;
 
@@ -103,8 +103,14 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
     if !files_to_rename.is_empty() {
-      handle_renames_result(&confirm_changes(&files_to_rename, encoded_series_directory_path), &files_to_rename);
-      create_series_season_directories(encoded_series_directory_path)
+      match confirm_changes(&files_to_rename, encoded_series_directory_path) {
+        RenamesResult::Correct => {
+          perform_rename(&files_to_rename);
+          create_series_season_directories(encoded_series_directory_path)
+            .map(|_| Output::Success)
+        },
+        RenamesResult::Wrong => Ok(Output::UserCanceled)
+      }
     } else {
       Err(Box::new(RenamerError::NoFilesToRename))
     }
@@ -181,15 +187,6 @@ fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
   format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season_number)
 }
 
-fn handle_renames_result(rename_result: &RenamesResult, files_to_rename: &[Rename]) {
-  match rename_result {
-    RenamesResult::Correct => perform_rename(files_to_rename),
-    RenamesResult::Wrong => {
-      println!("Aborting rename"); // TODO: Fix
-      std::process::exit(1)
-    }
-  }
-}
 
 fn create_series_season_directories(encoded_series_directory_path: &Path) -> R {
   create_all_directories(encoded_series_directory_path)
