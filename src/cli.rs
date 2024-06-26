@@ -1,16 +1,25 @@
-use clap::{Args, Parser};
+use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
 
 /// Rename TV series ripped from makeMKV
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about)]
 pub struct MkvRenamerArgs {
+  #[command(subcommand)]
+  pub commands: MkvCommands,
+}
 
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum MkvCommands {
+  Rename(RenameArgs),
+  Export(ExportArgs),
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct RenameArgs {
   #[command(flatten)]
   pub metadata_input_type: MetadataInputType,
-
-  /// Export the metadata from the supplied URL.
-  #[clap(long, value_parser)]
-  pub export_only: Option<String>,
 
   /// The location of the processing directory (PD). See extended help for a full structure.
   ///
@@ -22,7 +31,7 @@ pub struct MkvRenamerArgs {
   #[clap(short, long, value_parser)]
   pub processing_dir: String,
 
-  /// The session to use, accepts values from 1 to 100.
+  /// The session number to use, accepts values from 1 to 100.
   #[clap(short, long, value_parser=clap::value_parser!(u8).range(1..100))]
   pub session_dir: u8,
 
@@ -32,18 +41,31 @@ pub struct MkvRenamerArgs {
 }
 
 #[derive(Args, Clone, Debug)]
+pub struct ExportArgs {
+  /// The url of TVDB season information.
+  /// Example: https://thetvdb.com/series/thundercats/seasons/official/1
+  #[arg(long, short, value_name = "url")]
+  pub url_metadata: String,
+
+  /// Where to extract the metadata to
+  #[arg(long, short, value_name = "path")]
+  pub export_path: PathBuf
+}
+
+
+#[derive(Args, Clone, Debug)]
 #[group(required = true, multiple = false)]
 pub struct MetadataInputType {
 
-    /// The url of TVDB season information.
-    /// Example: https://thetvdb.com/series/thundercats/seasons/official/1
-    #[arg(long, short, value_name = "url")]
-    pub url_metadata: Option<String>,
+  /// The url of TVDB season information.
+  /// Example: https://thetvdb.com/series/thundercats/seasons/official/1
+  #[arg(long, short, value_name = "url")]
+  pub url_metadata: Option<String>,
 
-    /// The location of series metadata file.
-    /// An example format can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/sample.conf
-    #[arg(long, short, value_name = "file")]
-    pub file_metadata: Option<String>,
+  /// The location of series metadata file.
+  /// An example format can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/sample.conf
+  #[arg(long, short, value_name = "file")]
+  pub file_metadata: Option<String>,
 }
 
 
