@@ -1,6 +1,6 @@
 use crate::models::RenamerError;
 
-pub async fn download_metadata(url: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn download_metadata(url: &str) -> Result<String, RenamerError> {
   let body =
     reqwest::get(url)
       .await

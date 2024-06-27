@@ -5,6 +5,7 @@ use console::Style;
 #[derive(Debug)]
 pub enum RenamerError {
   InvalidMetadataConfiguration(String),
+  CouldNotAccessMetadataFile(String, String),
   CouldNotAccessMetadataURL(String, String),
   CouldNotDecodeMetadataBody(String, String),
   CouldNotExportEpisodeMetadata(String, PathBuf, String),
@@ -25,6 +26,7 @@ impl fmt::Display for RenamerError {
       let red = Style::new().red();
       let error = match self {
         RenamerError::InvalidMetadataConfiguration(message) => format!("Invalid metadata configuration: {message}"),
+        RenamerError::CouldNotAccessMetadataFile(file, message) => format!("Could not access metadata file: {file}, due to: {message}"),
         RenamerError::CouldNotAccessMetadataURL(url, message) => format!("Could not access metadata URL: {url}, due to: {message}"),
         RenamerError::CouldNotDecodeMetadataBody(url, message) => format!("Could not decode metadata body from URL: {url}, due to: {message}"),
         RenamerError::CouldNotExportEpisodeMetadata(url, path, message) => format!("Could not export metadata from URL: {url} to file: {}, due to: {message}", path.to_string_lossy()),

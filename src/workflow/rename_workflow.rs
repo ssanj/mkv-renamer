@@ -25,7 +25,7 @@ pub async fn perform(rename_args: RenameArgs) -> ROutput {
       let file_path = Path::new(&file);
       handle_file_metadata(file_path, &processing_dir, &session_dir, rename_args.verbose)
     },
-    ConfigMetadataInputType::Invalid => Err(Box::new(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type)))),
+    ConfigMetadataInputType::Invalid => Err(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type))),
   }
 }
 
@@ -36,7 +36,7 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
 
   let processing_dir_path = processing_dir.as_ref();
   if !processing_dir_path.exists() {
-      Err(Box::new(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned())))
+      Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned()))
   } else {
     program(processing_dir, session_dir, &episodes_definition, verbose)
   }
@@ -49,9 +49,9 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
         let episodes_definition = read_episodes_from_file(series_metadata_path)?;
         program(processing_dir, session_dir, &episodes_definition, verbose)
       },
-      (false, false) => Err(Box::new(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned()))),
-      (_, false) => Err(Box::new(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned()))),
-      (false, _) => Err(Box::new(RenamerError::MetadataDirectoryDoesNotExist(series_metadata_path.to_owned()))),
+      (false, false) => Err(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned())),
+      (_, false) => Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned())),
+      (false, _) => Err(RenamerError::MetadataDirectoryDoesNotExist(series_metadata_path.to_owned())),
   }
 }
 
@@ -94,7 +94,7 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
 
   // We have more ripped episodes than metadata episode names. Abort.
   if ripped_episode_filenames.len() > metadata_episodes.len() {
-    Err(Box::new(RenamerError::NotEnoughMetadataForEpisodes(metadata_episodes.len(), ripped_episode_filenames.len())))
+    Err(RenamerError::NotEnoughMetadataForEpisodes(metadata_episodes.len(), ripped_episode_filenames.len()))
   } else {
     let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
     let encoded_series_directory_path = encoded_series_directory.as_path();
@@ -111,7 +111,7 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
         RenamesResult::Wrong => Ok(Output::UserCanceled)
       }
     } else {
-      Err(Box::new(RenamerError::NoFilesToRename))
+      Err(RenamerError::NoFilesToRename)
     }
   }
 }
@@ -197,12 +197,10 @@ fn create_all_directories(p: &Path) -> R {
   if !p.exists() {
     fs::create_dir_all(p)
       .map_err(|e| {
-        let err: Box<dyn Error> =
-          Box::new(RenamerError::CouldNotCreatedSeriesDirectory(<Path as AsRef<Path>>::as_ref(p).to_owned(), e.to_string()));
-        err
+        RenamerError::CouldNotCreatedSeriesDirectory(<Path as AsRef<Path>>::as_ref(p).to_owned(), e.to_string())
       })
   } else {
-    Err(Box::new(RenamerError::SeriesDirectoryAlreadyExists(p.to_owned())))
+    Err(RenamerError::SeriesDirectoryAlreadyExists(p.to_owned()))
   }
 }
 
@@ -218,12 +216,15 @@ fn perform_rename(renames: &[Rename]) {
   }
 }
 
-fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition, Box<dyn Error>> {
-  let file = fs::File::open(&path)?;
+fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition, RenamerError> {
+  let file =
+    fs::File::open(&path)
+      .map_err(|e| RenamerError::CouldNotAccessMetadataFile(path.as_ref().to_string_lossy().to_string(), e.to_string()))?;
+
   let reader = BufReader::new(file);
   let u =
     serde_json::from_reader(reader)
-      .map_err(|e| Box::new(RenamerError::CouldNotDecodeEpisodeJson(path.as_ref().to_owned(), e.to_string())))?;
+      .map_err(|e| RenamerError::CouldNotDecodeEpisodeJson(path.as_ref().to_owned(), e.to_string()))?;
 
   Ok(u)
 }

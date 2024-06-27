@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::error::Error;
 use crate::html_scraper::get_series_metadata;
 use crate::metadata_downloader::download_metadata;
 use crate::models::*;
@@ -21,16 +20,12 @@ async fn handle_url_metadata_export(url: &str, export_path: PathBuf) -> ROutput 
     .create_new(true)
     .open(&export_path)
     .map_err(|e| {
-      let err: Box<dyn Error> =
-        Box::new(RenamerError::CouldNotExportEpisodeMetadata(url.to_owned(), export_path.clone(), e.to_string()));
-      err
+      RenamerError::CouldNotExportEpisodeMetadata(url.to_owned(), export_path.clone(), e.to_string())
     })
     .and_then(|file| {
       serde_json::to_writer_pretty(file, &episodes_definition)
         .map_err(|e| {
-          let err: Box<dyn Error> =
-            Box::new(RenamerError::CouldNotExportEpisodeMetadata(url.to_owned(), export_path.clone(), e.to_string()));
-          err
+          RenamerError::CouldNotExportEpisodeMetadata(url.to_owned(), export_path.clone(), e.to_string())
         })
     })
     .map(|_| Output::Success)
