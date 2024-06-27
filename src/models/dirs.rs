@@ -16,16 +16,16 @@ impl AsRef<Path> for RipsDir {
 }
 
 #[derive(Debug)]
-pub struct RipsSessionDir(pub PathBuf);
+pub struct RipsSessionNumberDir(pub PathBuf);
 
-impl AsRef<Path> for RipsSessionDir {
+impl AsRef<Path> for RipsSessionNumberDir {
     fn as_ref(&self) -> &Path {
       self.0.as_path()
     }
 }
 
 #[allow(dead_code)]
-impl RipsSessionDir {
+impl RipsSessionNumberDir {
   pub fn join<P: AsRef<Path>>(&self, path: P) -> PathBuf {
     self.0.join(path)
   }
@@ -59,9 +59,9 @@ impl AsRef<Path> for EncodesDir {
 
 
 #[derive(Debug)]
-pub struct SessionDir(pub String);
+pub struct SessionNumberDir(pub String);
 
-impl SessionDir {
+impl SessionNumberDir {
   pub fn new(session_id: u8) -> Self {
     Self(format!("session{session_id}"))
   }
@@ -72,7 +72,7 @@ impl SessionDir {
   }
 }
 
-impl AsRef<Path> for SessionDir {
+impl AsRef<Path> for SessionNumberDir {
   fn as_ref(&self) -> &Path {
     Path::new(&self.0)
   }
@@ -88,12 +88,12 @@ impl ProcessingDir {
   }
 
   /// PD/Rips/sessionX
-  pub fn rips_session_dir(&self, session_dir: &SessionDir) -> RipsSessionDir {
-    RipsSessionDir(self.rips_dir().join(session_dir))
+  pub fn rips_session_number(&self, session_dir: &SessionNumberDir) -> RipsSessionNumberDir {
+    RipsSessionNumberDir(self.rips_dir().join(session_dir))
   }
 
   /// PD/Rips/sessionX/renames
-  pub fn rips_session_renames_dir(&self, session_dir: &SessionDir) -> RipsSessionRenamesDir {
+  pub fn rips_session_renames_dir(&self, session_dir: &SessionNumberDir) -> RipsSessionRenamesDir {
     RipsSessionRenamesDir(self.rips_dir().join(session_dir.renames_dir()))
   }
 

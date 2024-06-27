@@ -12,24 +12,24 @@ use crate::cli::*;
 pub async fn perform(rename_args: RenameArgs) -> ROutput {
   let processing_dir_path = Path::new(&rename_args.processing_dir);
   let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
-  let session_dir = SessionDir::new(rename_args.session_dir);
+  let session_number = SessionNumberDir::new(rename_args.session_number);
   let metadata_input_type = rename_args.metadata_input_type;
 
   let metadata_type = get_metadata_type(&metadata_input_type);
 
   match metadata_type {
     ConfigMetadataInputType::Url(url) =>
-      handle_url_metadata(&url, &processing_dir, &session_dir, rename_args.verbose).await,
+      handle_url_metadata(&url, &processing_dir, &session_number, rename_args.verbose).await,
     ConfigMetadataInputType::File(file) => {
       let file_path = Path::new(&file);
-      handle_file_metadata(file_path, &processing_dir, &session_dir, rename_args.verbose)
+      handle_file_metadata(file_path, &processing_dir, &session_number, rename_args.verbose)
     },
     ConfigMetadataInputType::Invalid => Err(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type))),
   }
 }
 
 
-async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> ROutput {
+async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
   let page_content = download_metadata(url).await?;
   let episodes_definition = get_series_metadata(&page_content);
 
@@ -37,16 +37,16 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
   if !processing_dir_path.exists() {
       Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned()))
   } else {
-    program(processing_dir, session_dir, &episodes_definition, verbose)
+    program(processing_dir, session_number, &episodes_definition, verbose)
   }
 }
 
-fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_dir: &SessionDir, verbose: bool) -> ROutput {
+fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
   let processing_dir_path = processing_dir.as_ref();
   match (series_metadata_path.exists(), processing_dir_path.exists()) {
       (true, true) => {
         let episodes_definition = read_episodes_from_file(series_metadata_path)?;
-        program(processing_dir, session_dir, &episodes_definition, verbose)
+        program(processing_dir, session_number, &episodes_definition, verbose)
       },
       (false, false) => Err(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned())),
       (_, false) => Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned())),
@@ -68,20 +68,20 @@ fn get_metadata_type(input_type: &MetadataInputType) -> ConfigMetadataInputType 
   }
 }
 
-fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> ROutput {
+fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> ROutput {
   let metadata_episodes = &episodes_definition.episodes;
   let series_metadata = &episodes_definition.metadata;
 
-  let rips_directory = processing_dir.rips_session_dir(session_dir);
-  let renames_directory = processing_dir.rips_session_renames_dir(session_dir);
+  let rips_directory = processing_dir.rips_session_number(session_number);
+  let renames_directory = processing_dir.rips_session_renames_dir(session_number);
   let encodes_directory = processing_dir.encodes_dir();
 
   if verbose {
     let cyan = Style::new().cyan();
     println!();
     println!("{}: {} (Root directory)",  cyan.apply_to("processing dir"), processing_dir.as_ref().to_string_lossy());
-    println!("{}: {} (Contains disc1..N with .mkv files)", cyan.apply_to("session dir"), processing_dir.rips_session_dir(session_dir).as_ref().to_string_lossy());
-    println!("{}: {} (Stores renamed episodes)", cyan.apply_to("rename dir"), processing_dir.rips_session_renames_dir(session_dir).as_ref().to_string_lossy());
+    println!("{}: {} (Contains disc1..N with .mkv files)", cyan.apply_to("session dir"), processing_dir.rips_session_number(session_number).as_ref().to_string_lossy());
+    println!("{}: {} (Stores renamed episodes)", cyan.apply_to("rename dir"), processing_dir.rips_session_renames_dir(session_number).as_ref().to_string_lossy());
     println!("{}: {} (Stores encoded episodes)", cyan.apply_to("encode dir"), processing_dir.encodes_dir().as_ref().to_string_lossy());
     println!()
   }
@@ -115,8 +115,8 @@ fn program(processing_dir: &ProcessingDir, session_dir: &SessionDir, episodes_de
   }
 }
 
-fn get_ripped_episode_filenames(rips_session_dir: &RipsSessionDir) -> Vec<FileNameAndExt> {
-  WalkDir::new(rips_session_dir)
+fn get_ripped_episode_filenames(rips_session_number: &RipsSessionNumberDir) -> Vec<FileNameAndExt> {
+  WalkDir::new(rips_session_number)
       .into_iter()
       .filter_map(|re| re.ok())
       .filter_map(|dir_entry| {
