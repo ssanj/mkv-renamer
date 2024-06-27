@@ -2,7 +2,6 @@ use walkdir::WalkDir;
 use std::io::{BufRead, BufReader};
 use console::Style;
 use std::path::{Path, PathBuf};
-use std::error::Error;
 use std::fs;
 use crate::html_scraper::get_series_metadata;
 use crate::metadata_downloader::download_metadata;
