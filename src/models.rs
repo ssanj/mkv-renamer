@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
@@ -9,8 +8,8 @@ pub use dirs::*;
 pub use episodes::*;
 pub use errors::*;
 
-pub type R = Result<(), Box<dyn Error>>;
-pub type ROutput = Result<Output, Box<dyn Error>>;
+pub type R = Result<(), RenamerError>;
+pub type ROutput = Result<Output, RenamerError>;
 
 pub enum Output {
   Success,
