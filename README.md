@@ -44,21 +44,18 @@ See [Default output file name template](https://forum.makemkv.com/forum/viewtopi
 ## Usage
 
 ```
-Rename TV series ripped from optical media
+Rename TV series ripped from makeMKV
 
-Usage: mkv-renamer --processing-dir <PROCESSING_DIR> <--url-metadata <url>|--file-metadata <file>>
+Usage: mkv-renamer <COMMAND>
+
+Commands:
+  rename  Renames a collection of ripped episodes from a metadata source
+  export  Exports metadata information for a series to a file
+  help    Print this message or the help of the given subcommand(s)
 
 Options:
-  -u, --url-metadata <url>
-          The url of TVDB season information. Example: https://thetvdb.com/series/thundercats/seasons/official/1
-  -f, --file-metadata <file>
-          The location of series metadata file. An example format can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/sample.conf
-  -p, --processing-dir <PROCESSING_DIR>
-          The location of the processing directory (PD). Structure: PD/{Rips, Renames, Encodes}
-  -h, --help
-          Print help
-  -V, --version
-          Print version
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
 You need to supply a processing directory (see below), and some metadata about the series, either via a URL or a JSON file.
@@ -127,7 +124,7 @@ The encodes directory is where the renamed files are encoded to. mkv-renamer wil
 
 The metadata for the series can be supplied either as a JSON file path or a URL to the TVDB series.
 
-### Config file
+### Metadata file
 
 You must specify the following `metadata` fields:
 
@@ -166,7 +163,11 @@ An example config file:
 }
 ```
 
-You can find [The TVDB]() id as follows:
+Find the episode information from any site on the internet or copy it from the leaflet on the discs.
+
+The only extra bit of information you will need will be the `tvdb_id`.
+
+You can find `tvdb_id` as follows:
 
 1. Search for your TV series at [The TVDB](https://thetvdb.com/) [example](https://thetvdb.com/search?query=Strange%20new%20worlds)
 1. Copy it from the search results
@@ -176,10 +177,18 @@ You can find [The TVDB]() id as follows:
 Example usage:
 
 ```
-mkv-renamer -p /some/processing/directory -f /path/to/series.json
+mkv-renamer rename -p /some/processing/directory -f /path/to/<METADATA_FILE> -s 1
 ```
 
-## URL to TVDB season
+
+## Rename with Metadata file
+
+```
+mkv-renamer rename -p /some/processing/directory -f /path/to/<METADATA_FILE> -s 1
+```
+
+
+## Rename with URL to TVDB season
 
 To find the correct URL to supply to mkv-renamer do the following:
 
@@ -191,7 +200,16 @@ To find the correct URL to supply to mkv-renamer do the following:
 
 Example usage:
 ```
-mkv-renamer -p /some/processing/directory -u https://thetvdb.com/series/star-trek-strange-new-worlds/seasons/official/1
+mkv-renamer rename -p /some/processing/directory -u https://thetvdb.com/series/star-trek-strange-new-worlds/seasons/official/1 -s 1
+```
+
+## Export Metadata file from URL to TVDB Season
+
+If you need to just dump the data from the TVDB season URL into a file, manipulate it and then run a rename:
+
+```
+ mkv-renamer export -u <TVDB_SERIES_URL> -e series.json
+ mkv-renamer rename -p /some/processing/directory -f /path/to/series.json -s 1
 ```
 
 ## Workflow
@@ -206,6 +224,7 @@ mkv-renamer -p /some/processing/directory -u https://thetvdb.com/series/star-tre
    This will:
      1. Write the correctly named episode MKV files into your `PD/Renames` folder.
      1. Create a folder in the `PD/Encodes` folder with the following format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`
+     1. Create an `encode_dir.txt` file under `PD/Renames` folder with the path to `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
 1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
 1. Copy the folder and its encoded contents to your media server for indexing.
 
