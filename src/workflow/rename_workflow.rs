@@ -1,5 +1,5 @@
 use walkdir::WalkDir;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use console::Style;
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -8,6 +8,7 @@ use crate::metadata_downloader::download_metadata;
 use crate::models::*;
 use crate::cli::*;
 
+pub const ENCODES_FILE: &str = "encode_dir.txt";
 
 pub async fn perform(rename_args: RenameArgs) -> ROutput {
   let processing_dir_path = Path::new(&rename_args.processing_dir);
@@ -105,6 +106,7 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
         RenamesResult::Correct => {
           perform_rename(&files_to_rename);
           create_series_season_directories(encoded_series_directory_path)
+            .and(write_encodes_file(&renames_directory, encoded_series_directory_path))
             .map(|_| Output::Success)
         },
         RenamesResult::Wrong => Ok(Output::UserCanceled)
@@ -113,6 +115,21 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
       Err(RenamerError::NoFilesToRename)
     }
   }
+}
+
+fn write_encodes_file<P: AsRef<Path>>(rename_dir: &RipsSessionRenamesDir, encoded_series_directory_path: P) -> R {
+  let encodes_file = rename_dir.as_ref().join(ENCODES_FILE);
+  let encodes_file_path = encodes_file.as_path();
+  std::fs::OpenOptions::new()
+    .write(true)
+    .open(encodes_file_path)
+    .map_err(|e| RenamerError::CouldNotOpenEncodesFile(encodes_file.clone(), e.to_string()))
+    .and_then(|mut file| {
+      file.write(encoded_series_directory_path.as_ref().to_string_lossy().as_bytes())
+        .and(file.flush())
+        .map_err(|e| RenamerError::CouldNotWriteEncodesFile(encodes_file, e.to_string()))
+    })
+    .map(|_| ())
 }
 
 fn get_ripped_episode_filenames(rips_session_number: &RipsSessionNumberDir) -> Vec<FileNameAndExt> {

@@ -17,6 +17,8 @@ pub enum RenamerError {
   NoFilesToRename,
   CouldNotCreatedSeriesDirectory(PathBuf, String),
   SeriesDirectoryAlreadyExists(PathBuf),
+  CouldNotOpenEncodesFile(PathBuf, String),
+  CouldNotWriteEncodesFile(PathBuf, String),
 }
 
 impl std::error::Error for RenamerError {}
@@ -37,6 +39,8 @@ impl fmt::Display for RenamerError {
         RenamerError::NotEnoughMetadataForEpisodes(metadata, episodes) => format!("Not enough metadata episode names ({}) to match ripped files ({})", metadata, episodes),
         RenamerError::NoFilesToRename => "No files found to rename".to_owned(),
         RenamerError::CouldNotCreatedSeriesDirectory(path, message) => format!("Could not create series directory: {}, due to: {}", path.to_string_lossy(), message),
+        RenamerError::CouldNotOpenEncodesFile(path, message) => format!("Could not open encodes.txt file for writing: {}, due to: {}", path.to_string_lossy(), message),
+        RenamerError::CouldNotWriteEncodesFile(path, message) => format!("Could not write to encodes.txt file: {}, due to: {}", path.to_string_lossy(), message),
         RenamerError::SeriesDirectoryAlreadyExists(path) => format!("Series directory: {} already exists. Aborting.", path.to_string_lossy()),
       };
 
