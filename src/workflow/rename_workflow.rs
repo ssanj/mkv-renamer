@@ -99,6 +99,10 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
     let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
     let encoded_series_directory_path = encoded_series_directory.as_path();
 
+    if encoded_series_directory_path.exists() {
+      return Err(RenamerError::SeriesDirectoryAlreadyExists(encoded_series_directory))
+    }
+
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
     if !files_to_rename.is_empty() {
@@ -120,6 +124,10 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
 fn write_encodes_file<P: AsRef<Path>>(rename_dir: &RipsSessionRenamesDir, encoded_series_directory_path: P) -> R {
   let encodes_file = rename_dir.as_ref().join(ENCODES_FILE);
   let encodes_file_path = encodes_file.as_path();
+
+  // Try to remove the old if it exists
+  let _ = std::fs::remove_file(encodes_file_path);
+
   std::fs::OpenOptions::new()
     .create_new(true)
     .write(true)
