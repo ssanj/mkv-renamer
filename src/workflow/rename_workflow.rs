@@ -121,6 +121,7 @@ fn write_encodes_file<P: AsRef<Path>>(rename_dir: &RipsSessionRenamesDir, encode
   let encodes_file = rename_dir.as_ref().join(ENCODES_FILE);
   let encodes_file_path = encodes_file.as_path();
   std::fs::OpenOptions::new()
+    .create_new(true)
     .write(true)
     .open(encodes_file_path)
     .map_err(|e| RenamerError::CouldNotOpenEncodesFile(encodes_file.clone(), e.to_string()))
