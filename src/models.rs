@@ -60,3 +60,9 @@ pub enum RenamesResult {
   Correct,
   Wrong
 }
+
+pub enum ConfigMetadataInputType {
+  Url(String),
+  File(String),
+  Invalid
+}

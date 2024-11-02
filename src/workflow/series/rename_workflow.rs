@@ -1,14 +1,10 @@
-use walkdir::WalkDir;
-use std::io::{BufRead, BufReader, Write};
 use console::Style;
 use std::path::{Path, PathBuf};
-use std::fs;
 use crate::html_scraper::get_series_metadata;
 use crate::metadata_downloader::download_metadata;
 use crate::models::*;
 use crate::cli::*;
-
-pub const ENCODES_FILE: &str = "encode_dir.txt";
+use super::super::common;
 
 // TODO: Change for movie - create modules for series and movie and move these workflows under them.
 pub async fn perform(rename_args: RenameArgs) -> ROutput {
@@ -17,7 +13,7 @@ pub async fn perform(rename_args: RenameArgs) -> ROutput {
   let session_number = SessionNumberDir::new(rename_args.session_number);
   let metadata_input_type = rename_args.metadata_input_type;
 
-  let metadata_type = get_metadata_type(&metadata_input_type);
+  let metadata_type = common::get_metadata_type(&metadata_input_type);
 
   match metadata_type {
     ConfigMetadataInputType::Url(url) =>
@@ -48,7 +44,7 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
   match (series_metadata_path.exists(), processing_dir_path.exists()) {
       (true, true) => {
         // TODO: Change for movie
-        let episodes_definition = read_episodes_from_file(series_metadata_path)?;
+        let episodes_definition = common::read_input_from_file(series_metadata_path)?;
         program(processing_dir, session_number, &episodes_definition, verbose)
       },
       (false, false) => Err(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned())),
@@ -57,19 +53,6 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
   }
 }
 
-enum ConfigMetadataInputType {
-  Url(String),
-  File(String),
-  Invalid
-}
-
-fn get_metadata_type(input_type: &MetadataInputType) -> ConfigMetadataInputType {
-  match (input_type.clone().url_metadata, input_type.clone().file_metadata) {
-    (Some(url), _) => ConfigMetadataInputType::Url(url),
-    (_, Some(file)) => ConfigMetadataInputType::File(file),
-    _ => ConfigMetadataInputType::Invalid
-  }
-}
 
 fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> ROutput {
   let metadata_episodes = &episodes_definition.episodes;
@@ -90,7 +73,7 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
   }
 
   // TODO: Change for movie - rename function
-  let mut ripped_episode_filenames = get_ripped_episode_filenames(&rips_directory);
+  let mut ripped_episode_filenames = common::get_ripped_filenames(&rips_directory);
   // Sort disk file names in ascending order
   // TODO: Change for movie - unnecessary to sort because we only have a single file
   ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(fne2).unwrap());
@@ -113,11 +96,11 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
     if !files_to_rename.is_empty() {
-      match confirm_changes(&files_to_rename, encoded_series_directory_path) {
+      match common::confirm_changes(&files_to_rename, encoded_series_directory_path) {
         RenamesResult::Correct => {
-          perform_rename(&files_to_rename);
-          create_series_season_directories(encoded_series_directory_path)
-            .and(write_encodes_file(&renames_directory, encoded_series_directory_path))
+          common::perform_rename(&files_to_rename);
+          common::create_all_directories(encoded_series_directory_path)
+            .and(common::write_encodes_file(&renames_directory, encoded_series_directory_path))
             .map(|_| Output::Success)
         },
         RenamesResult::Wrong => Ok(Output::UserCanceled)
@@ -128,45 +111,6 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
   }
 }
 
-fn write_encodes_file<P: AsRef<Path>>(rename_dir: &RipsSessionRenamesDir, encoded_series_directory_path: P) -> R {
-  let encodes_file = rename_dir.as_ref().join(ENCODES_FILE);
-  let encodes_file_path = encodes_file.as_path();
-
-  // Try to remove the old if it exists
-  let _ = std::fs::remove_file(encodes_file_path);
-
-  std::fs::OpenOptions::new()
-    .create_new(true)
-    .write(true)
-    .open(encodes_file_path)
-    .map_err(|e| RenamerError::CouldNotOpenEncodesFile(encodes_file.clone(), e.to_string()))
-    .and_then(|mut file| {
-      file.write(encoded_series_directory_path.as_ref().to_string_lossy().as_bytes())
-        .and(file.flush())
-        .map_err(|e| RenamerError::CouldNotWriteEncodesFile(encodes_file, e.to_string()))
-    })
-    .map(|_| ())
-}
-
-// TODO: Change for movie - rename
-fn get_ripped_episode_filenames(rips_session_number: &RipsSessionNumberDir) -> Vec<FileNameAndExt> {
-  WalkDir::new(rips_session_number)
-      .into_iter()
-      .filter_map(|re| re.ok())
-      .filter_map(|dir_entry| {
-        let p = dir_entry.path();
-        let is_file = p.is_file();
-        let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disc");
-        if is_file && has_disk_subdirectory {
-          p.file_name().and_then(|name|{
-            p.extension().map(|ext| FileNameAndExt::new(p, name, ext))  // Some(FileNameAndExt)
-          })
-        } else {
-          None
-        }
-     })
-    .collect()
-}
 
 // TODO: Change for movie
 fn get_files_to_rename(ripped_episode_filenames: &[FileNameAndExt], metadata_episodes: &[EpisodeDefinition], renames_dir: &RipsSessionRenamesDir) -> Vec<Rename> {
@@ -186,32 +130,6 @@ fn get_files_to_rename(ripped_episode_filenames: &[FileNameAndExt], metadata_epi
     .collect()
 }
 
-fn confirm_changes(files_to_rename: &Vec<Rename>, encodes_series_folder_structure: &Path) -> RenamesResult {
-  println!("The following renames will be performed:");
-  let yellow = Style::new().yellow();
-
-  for f in files_to_rename {
-    println!("{:?} -> {:?}", f.from_file_name, yellow.apply_to(f.to_file_name.as_path().to_string_lossy()))
-  }
-  println!();
-
-  println!("The following directory will be created:");
-  println!("{}", yellow.apply_to(encodes_series_folder_structure.to_string_lossy().to_string()));
-  println!();
-
-  println!("Proceed? 'y' to proceed or any other key to abort");
-
-  let mut user_response = String::new();
-  let stdin = std::io::stdin();
-  let mut handle = stdin.lock();
-  handle.read_line(&mut user_response).expect("Could not read from stdin"); // Unexpected, so throw
-  let line = user_response.lines().next().expect("Could not extract line from buffer"); // Unexpected, so throw
-
-  match line {
-    "y" => RenamesResult::Correct,
-    _ => RenamesResult::Wrong
-  }
-}
 
 // TODO: Change for movie
 fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
@@ -222,46 +140,8 @@ fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
 }
 
 
-fn create_series_season_directories(encoded_series_directory_path: &Path) -> R {
-  create_all_directories(encoded_series_directory_path)
-}
-
-// Fails if the directory already exists
-fn create_all_directories(p: &Path) -> R {
-  // We want to fail if the directory already exists
-  if !p.exists() {
-    fs::create_dir_all(p)
-      .map_err(|e| {
-        RenamerError::CouldNotCreatedSeriesDirectory(<Path as AsRef<Path>>::as_ref(p).to_owned(), e.to_string())
-      })
-  } else {
-    Err(RenamerError::SeriesDirectoryAlreadyExists(p.to_owned()))
-  }
-}
-
 // TODO: Change for movie
 fn get_series_directory(encodes_dir: &EncodesDir, series_metadata: &SeriesMetaData) -> PathBuf {
   let series_folder_structure = get_series_folder_structure(series_metadata);
   encodes_dir.join(series_folder_structure)
-}
-
-
-fn perform_rename(renames: &[Rename]) {
-  for r in renames {
-    fs::rename(&r.from_file_name, &r.to_file_name).unwrap_or_else(|e| panic!("could not rename {:?} -> {:?}, due to: {}", &r.from_file_name, &r.to_file_name, e))
-  }
-}
-
-// TODO: Change for movie - can we reuse this with a type Deserializer?
-fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition, RenamerError> {
-  let file =
-    fs::File::open(&path)
-      .map_err(|e| RenamerError::CouldNotAccessMetadataFile(path.as_ref().to_string_lossy().to_string(), e.to_string()))?;
-
-  let reader = BufReader::new(file);
-  let u =
-    serde_json::from_reader(reader)
-      .map_err(|e| RenamerError::CouldNotDecodeEpisodeJson(path.as_ref().to_owned(), e.to_string()))?;
-
-  Ok(u)
 }
