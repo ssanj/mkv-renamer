@@ -1,10 +1,11 @@
 use crate::models::*;
 use crate::cli::*;
 
-mod rename_workflow;
-mod export_workflow;
-mod series_workflow;
-mod movie_workflow;
+mod series;
+mod movie;
+
+pub use series::series_workflow as series_workflow;
+pub use movie::movie_workflow as movie_workflow;
 
 pub async fn perform_workflow(config: MkvRenamerArgs) -> ROutput {
   match config.commands {
