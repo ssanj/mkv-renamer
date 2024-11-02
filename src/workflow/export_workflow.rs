@@ -1,21 +1,21 @@
 use std::path::PathBuf;
-use crate::html_scraper::get_series_metadata;
+use serde::Serialize;
+
 use crate::metadata_downloader::download_metadata;
 use crate::models::*;
 use crate::cli::ExportArgs;
 
-pub async fn perform(export_args: ExportArgs) -> ROutput {
+pub async fn perform<I: Serialize, F: FnOnce(&str) -> I>(export_args: ExportArgs, get_metadata: F) -> ROutput {
   let url = export_args.url_metadata;
   let export_path = export_args.export_path;
-  handle_url_metadata_export(&url, export_path).await
+  handle_url_metadata_export(&url, get_metadata, export_path).await
 }
 
-// TODO: Parameterise on metadata type
-async fn handle_url_metadata_export(url: &str, export_path: PathBuf) -> ROutput {
+async fn handle_url_metadata_export<I: Serialize, F: FnOnce(&str) -> I>(url: &str, get_metadata: F, export_path: PathBuf) -> ROutput {
   let page_content = download_metadata(url).await?;
 
   // TODO: Change for movie
-  let episodes_definition = get_series_metadata(&page_content);
+  let episodes_definition = get_metadata(&page_content);
   use std::fs::OpenOptions;
 
   OpenOptions::new()

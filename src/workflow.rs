@@ -4,6 +4,7 @@ use crate::cli::*;
 mod series;
 mod movie;
 mod common;
+mod export_workflow;
 
 pub use series::series_workflow as series_workflow;
 pub use movie::movie_workflow as movie_workflow;
