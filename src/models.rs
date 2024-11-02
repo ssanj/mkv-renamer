@@ -3,9 +3,11 @@ use std::ffi::OsStr;
 
 mod dirs;
 mod episodes;
+mod movie;
 mod errors;
 pub use dirs::*;
 pub use episodes::*;
+pub use movie::*;
 pub use errors::*;
 
 pub type R = Result<(), RenamerError>;

@@ -740,7 +740,7 @@ dependencies = [
 
 [[package]]
 name = "mkv-renamer"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "clap",
  "console",
