@@ -10,6 +10,7 @@ use crate::cli::*;
 
 pub const ENCODES_FILE: &str = "encode_dir.txt";
 
+// TODO: Change for movie - create modules for series and movie and move these workflows under them.
 pub async fn perform(rename_args: RenameArgs) -> ROutput {
   let processing_dir_path = Path::new(&rename_args.processing_dir);
   let processing_dir = ProcessingDir(processing_dir_path.to_path_buf());
@@ -88,8 +89,10 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
     println!()
   }
 
+  // TODO: Change for movie - rename function
   let mut ripped_episode_filenames = get_ripped_episode_filenames(&rips_directory);
   // Sort disk file names in ascending order
+  // TODO: Change for movie - unnecessary to sort because we only have a single file
   ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(fne2).unwrap());
 
 
@@ -145,6 +148,7 @@ fn write_encodes_file<P: AsRef<Path>>(rename_dir: &RipsSessionRenamesDir, encode
     .map(|_| ())
 }
 
+// TODO: Change for movie - rename
 fn get_ripped_episode_filenames(rips_session_number: &RipsSessionNumberDir) -> Vec<FileNameAndExt> {
   WalkDir::new(rips_session_number)
       .into_iter()
@@ -154,7 +158,6 @@ fn get_ripped_episode_filenames(rips_session_number: &RipsSessionNumberDir) -> V
         let is_file = p.is_file();
         let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disc");
         if is_file && has_disk_subdirectory {
-          // TODO: Change for movie
           p.file_name().and_then(|name|{
             p.extension().map(|ext| FileNameAndExt::new(p, name, ext))  // Some(FileNameAndExt)
           })
@@ -249,7 +252,7 @@ fn perform_rename(renames: &[Rename]) {
   }
 }
 
-// TODO: Change for movie
+// TODO: Change for movie - can we reuse this with a type Deserializer?
 fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition, RenamerError> {
   let file =
     fs::File::open(&path)
