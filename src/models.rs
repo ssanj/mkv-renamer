@@ -2,11 +2,11 @@ use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 mod dirs;
-mod episodes;
+mod series;
 mod movie;
 mod errors;
 pub use dirs::*;
-pub use episodes::*;
+pub use series::*;
 pub use movie::*;
 pub use errors::*;
 
