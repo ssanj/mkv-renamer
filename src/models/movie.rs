@@ -1,9 +1,18 @@
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
-struct MovieDefinition {
+pub struct MovieDefinition {
   name: String,
   tvdb_id: String
+}
+
+impl MovieDefinition {
+  pub fn new(name: String, tvdb_id: String) -> Self {
+    Self {
+      name,
+      tvdb_id
+    }
+  }
 }
 
 

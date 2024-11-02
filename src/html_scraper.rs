@@ -1,4 +1,4 @@
-use crate::models::{EpisodesDefinition, EpisodeDefinition, SeriesMetaData};
+use crate::models::{EpisodeDefinition, EpisodesDefinition, MovieDefinition, SeriesMetaData};
 use scraper::{Html, Selector};
 
 /// This whole class is pretty loose with the error handling
@@ -121,4 +121,70 @@ fn get_season_number(episodes: &[EpisodeDefinition]) -> String {
         .unwrap();
 
       format!("{}", season_number.parse::<u8>().unwrap()) // 01 -> 1
+}
+
+pub fn get_movie_definition(html: &str) -> MovieDefinition {
+  let document = Html::parse_document(html);
+  let title_selector = Selector::parse("title").unwrap();
+  let tvid_selector = Selector::parse(r#"div[class="btn-group"]"#).unwrap();
+
+  let title =
+    document
+      .select(&title_selector)
+      .collect::<Vec<_>>()
+      .first()
+      .and_then(|e|
+        e
+          .inner_html()
+          .as_str()
+          .split('-')
+          .collect::<Vec<_>>()
+          .first()
+          .map(|s| s.trim().to_string())
+      )
+      .unwrap();
+
+  let tvid =
+    document
+      .select(&tvid_selector)
+      .collect::<Vec<_>>()
+      .first()
+      .and_then(|e|{
+        e
+          .value()
+          .attr("data-permission")
+      })
+      .unwrap();
+
+    // expected format: series-TVDBID-artwork
+  let splits: Vec<_> =
+    tvid
+      .split('-')
+      .collect();
+
+  let tvdb_id =
+    splits
+      .get(1) // get the second element
+      .unwrap()
+      .to_string();
+
+    MovieDefinition::new(title, tvdb_id)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::metadata_downloader::download_metadata;
+
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    // TODO: Move this to an Int test
+    #[tokio::test]
+    async fn test_get_movie_definition() {
+      let data = download_metadata("https://thetvdb.com/movies/star-wars-rise-of-skywalker").await.unwrap();
+      let result = get_movie_definition(&data);
+
+      let expected = MovieDefinition::new("Star Wars: The Rise of Skywalker".to_owned(), "12879".to_owned());
+      assert_eq!(result, expected)
+    }
 }
