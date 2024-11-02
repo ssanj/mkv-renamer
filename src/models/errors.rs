@@ -14,9 +14,11 @@ pub enum RenamerError {
   MetadataDirectoryDoesNotExist(PathBuf),
   CouldNotDecodeMetadataFileJson(PathBuf, String),
   NotEnoughMetadataForEpisodes(usize, usize),
+  NoMovieDefinitionFound,
   NoFilesToRename,
   CouldNotCreatedSeriesDirectory(PathBuf, String),
   SeriesDirectoryAlreadyExists(PathBuf),
+  MovieDirectoryAlreadyExists(PathBuf),
   CouldNotOpenEncodesFile(PathBuf, String),
   CouldNotWriteEncodesFile(PathBuf, String),
 }
@@ -37,11 +39,13 @@ impl fmt::Display for RenamerError {
         RenamerError::MetadataDirectoryDoesNotExist(metadata_dir) => format!("Metadata path: {} does not exist", metadata_dir.to_string_lossy()),
         RenamerError::CouldNotDecodeMetadataFileJson(path, message) => format!("Could not decode JSON from metadata file: {}, due to: {}", path.to_string_lossy(), message),
         RenamerError::NotEnoughMetadataForEpisodes(metadata, episodes) => format!("Not enough metadata episode names ({}) to match ripped files ({})", metadata, episodes),
+        RenamerError::NoMovieDefinitionFound => "Not metadata for movie found".to_owned(),
         RenamerError::NoFilesToRename => "No files found to rename".to_owned(),
         RenamerError::CouldNotCreatedSeriesDirectory(path, message) => format!("Could not create series directory: {}, due to: {}", path.to_string_lossy(), message),
         RenamerError::CouldNotOpenEncodesFile(path, message) => format!("Could not open encodes.txt file for writing: {}, due to: {}", path.to_string_lossy(), message),
         RenamerError::CouldNotWriteEncodesFile(path, message) => format!("Could not write to encodes.txt file: {}, due to: {}", path.to_string_lossy(), message),
         RenamerError::SeriesDirectoryAlreadyExists(path) => format!("Series directory: {} already exists. Aborting.", path.to_string_lossy()),
+        RenamerError::MovieDirectoryAlreadyExists(path) => format!("Movie directory: {} already exists. Aborting.", path.to_string_lossy()),
       };
 
       write!(f, "{}", red.apply_to(error))

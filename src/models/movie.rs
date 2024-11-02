@@ -13,6 +13,14 @@ impl MovieDefinition {
       tvdb_id
     }
   }
+
+  pub fn name(&self) -> &str {
+    &self.name
+  }
+
+  pub fn tvdb_id(&self) -> &str {
+    &self.tvdb_id
+  }
 }
 
 

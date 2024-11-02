@@ -123,3 +123,15 @@ pub fn read_input_from_file<P: AsRef<Path>, R: for<'a> Deserialize<'a>>(path: P)
 
   Ok(u)
 }
+
+pub fn dump_processing_info(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) {
+  if verbose {
+    let cyan = Style::new().cyan();
+    println!();
+    println!("{}: {} (Root directory)",  cyan.apply_to("processing dir"), processing_dir.as_ref().to_string_lossy());
+    println!("{}: {} (Contains disc1..N with .mkv files)", cyan.apply_to("session dir"), processing_dir.rips_session_number(session_number).as_ref().to_string_lossy());
+    println!("{}: {} (Stores renamed episodes)", cyan.apply_to("rename dir"), processing_dir.rips_session_renames_dir(session_number).as_ref().to_string_lossy());
+    println!("{}: {} (Stores encoded episodes)", cyan.apply_to("encode dir"), processing_dir.encodes_dir().as_ref().to_string_lossy());
+    println!()
+  }
+}

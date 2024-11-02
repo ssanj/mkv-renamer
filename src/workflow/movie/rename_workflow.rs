@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use crate::html_scraper::get_series_metadata;
+use crate::html_scraper::get_movie_definition;
 use crate::metadata_downloader::download_metadata;
 use crate::models::*;
 use crate::cli::*;
@@ -27,23 +27,22 @@ pub async fn perform(rename_args: RenameArgs) -> ROutput {
 
 async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
   let page_content = download_metadata(url).await?;
-  let episodes_definition = get_series_metadata(&page_content);
+  let movie_definition = get_movie_definition(&page_content);
 
   let processing_dir_path = processing_dir.as_ref();
   if !processing_dir_path.exists() {
       Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned()))
   } else {
-    program(processing_dir, session_number, &episodes_definition, verbose)
+    program(processing_dir, session_number, &movie_definition, verbose)
   }
 }
-
 
 fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
   let processing_dir_path = processing_dir.as_ref();
   match (series_metadata_path.exists(), processing_dir_path.exists()) {
       (true, true) => {
-        let episodes_definition = common::read_input_from_file(series_metadata_path)?;
-        program(processing_dir, session_number, &episodes_definition, verbose)
+        let movie_definition: MovieDefinition = common::read_input_from_file(series_metadata_path)?;
+        program(processing_dir, session_number, &movie_definition, verbose)
       },
       (false, false) => Err(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned())),
       (_, false) => Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned())),
@@ -52,39 +51,33 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
 }
 
 
-fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> ROutput {
-  let metadata_episodes = &episodes_definition.episodes;
-  let series_metadata = &episodes_definition.metadata;
-
+fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, movie_definition: &MovieDefinition, verbose: bool) -> ROutput {
   let rips_directory = processing_dir.rips_session_number(session_number);
   let renames_directory = processing_dir.rips_session_renames_dir(session_number);
   let encodes_directory = processing_dir.encodes_dir();
 
   common::dump_processing_info(processing_dir, session_number, verbose);
 
-  let mut ripped_episode_filenames = common::get_ripped_filenames(&rips_directory);
-  // Sort disk file names in ascending order
-  ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(fne2).unwrap());
+  let ripped_filenames = common::get_ripped_filenames(&rips_directory);
 
-  // We have more ripped episodes than metadata episode names. Abort.
-  if ripped_episode_filenames.len() > metadata_episodes.len() {
-    Err(RenamerError::NotEnoughMetadataForEpisodes(metadata_episodes.len(), ripped_episode_filenames.len()))
+  if ripped_filenames.is_empty() {
+    Err(RenamerError::NoMovieDefinitionFound)
   } else {
-    let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
-    let encoded_series_directory_path = encoded_series_directory.as_path();
+    let encoded_movie_directory = get_movie_directory(&encodes_directory, movie_definition);
+    let encoded_movie_directory_path = encoded_movie_directory.as_path();
 
-    if encoded_series_directory_path.exists() {
-      return Err(RenamerError::SeriesDirectoryAlreadyExists(encoded_series_directory))
+    if encoded_movie_directory_path.exists() {
+      return Err(RenamerError::MovieDirectoryAlreadyExists(encoded_movie_directory))
     }
 
-    let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
+    let files_to_rename = get_files_to_rename(&ripped_filenames, movie_definition, &renames_directory);
 
     if !files_to_rename.is_empty() {
-      match common::confirm_changes(&files_to_rename, encoded_series_directory_path) {
+      match common::confirm_changes(&files_to_rename, encoded_movie_directory_path) {
         RenamesResult::Correct => {
           common::perform_rename(&files_to_rename);
-          common::create_all_directories(encoded_series_directory_path)
-            .and(common::write_encodes_file(&renames_directory, encoded_series_directory_path))
+          common::create_all_directories(encoded_movie_directory_path)
+            .and(common::write_encodes_file(&renames_directory, encoded_movie_directory_path))
             .map(|_| Output::Success)
         },
         RenamesResult::Wrong => Ok(Output::UserCanceled)
@@ -96,16 +89,13 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
 }
 
 
-fn get_files_to_rename(ripped_episode_filenames: &[FileNameAndExt], metadata_episodes: &[EpisodeDefinition], renames_dir: &RipsSessionRenamesDir) -> Vec<Rename> {
+fn get_files_to_rename(ripped_movie_names: &[FileNameAndExt], movie_definition: &MovieDefinition, renames_dir: &RipsSessionRenamesDir) -> Vec<Rename> {
   let renames_dir_path = renames_dir.as_ref();
 
-  ripped_episode_filenames
+  ripped_movie_names
     .iter()
-    .enumerate()
-    .map(|(i, fne)|{
-      let episode = metadata_episodes.get(i).unwrap_or_else(|| panic!("could not read metadata_episodes index: {}", i));
-      let file_name_with_ext = format!("{} - {}.{}", episode.number, episode.name, fne.ext);
-
+    .map(|fne|{
+      let file_name_with_ext = format!("{}.{}", movie_definition.name(), fne.ext);
       let output_file_path = renames_dir_path.join(file_name_with_ext).to_path_buf();
       let path_to_output_file = output_file_path.to_path_buf();
       Rename::new(fne.clone().path, path_to_output_file)
@@ -114,15 +104,14 @@ fn get_files_to_rename(ripped_episode_filenames: &[FileNameAndExt], metadata_epi
 }
 
 
-fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
-  let series_name = series_metadata.name.clone();
-  let tvdb_id = series_metadata.tvdb_id.clone();
-  let season_number = series_metadata.season_number.clone();
-  format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season_number)
+fn get_movie_folder_structure(movie_definition: &MovieDefinition) -> String {
+  let movie_name = movie_definition.name();
+  let tvdb_id = movie_definition.tvdb_id();
+  format!("{} {{tvdb-{}}}", movie_name, tvdb_id)
 }
 
 
-fn get_series_directory(encodes_dir: &EncodesDir, series_metadata: &SeriesMetaData) -> PathBuf {
-  let series_folder_structure = get_series_folder_structure(series_metadata);
-  encodes_dir.join(series_folder_structure)
+fn get_movie_directory(encodes_dir: &EncodesDir, movie_definition: &MovieDefinition) -> PathBuf {
+  let movie_folder_structure = get_movie_folder_structure(movie_definition);
+  encodes_dir.join(movie_folder_structure)
 }
