@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 /// Rename TV series ripped from makeMKV
@@ -6,7 +6,19 @@ use std::path::PathBuf;
 #[clap(author, version, about)]
 pub struct MkvRenamerArgs {
   #[command(subcommand)]
-  pub commands: MkvCommands,
+  pub commands: MkvInputType
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum MkvInputType {
+
+  /// Process TV Series
+  #[command(subcommand)]
+  Series(MkvCommands),
+
+  /// Process Movies
+  #[command(subcommand)]
+  Movie(MkvCommands)
 }
 
 
@@ -55,6 +67,12 @@ pub struct ExportArgs {
   pub export_path: PathBuf
 }
 
+#[derive(Clone, Debug, ValueEnum)]
+pub enum InputType {
+  Series,
+  Movie
+}
+
 
 #[derive(Args, Clone, Debug)]
 #[group(required = true, multiple = false)]
@@ -65,10 +83,11 @@ pub struct MetadataInputType {
   #[arg(long, short, value_name = "url")]
   pub url_metadata: Option<String>,
 
-  /// The location of series metadata file.
-  /// An example format can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/sample.conf
+  /// The location of series metadata file. This depends on the input_type specified
+  /// An example formats can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/series-sample.conf
+  /// and https://raw.githubusercontent.com/ssanj/mkv-renamer/main/movie-sample.conf
   #[arg(long, short, value_name = "file")]
-  pub file_metadata: Option<String>,
+  pub file_metadata: Option<String>
 }
 
 

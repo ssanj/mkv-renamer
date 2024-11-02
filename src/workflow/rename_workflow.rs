@@ -46,6 +46,7 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
   let processing_dir_path = processing_dir.as_ref();
   match (series_metadata_path.exists(), processing_dir_path.exists()) {
       (true, true) => {
+        // TODO: Change for movie
         let episodes_definition = read_episodes_from_file(series_metadata_path)?;
         program(processing_dir, session_number, &episodes_definition, verbose)
       },
@@ -93,9 +94,11 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
 
 
   // We have more ripped episodes than metadata episode names. Abort.
+  // TODO: Change for movie
   if ripped_episode_filenames.len() > metadata_episodes.len() {
     Err(RenamerError::NotEnoughMetadataForEpisodes(metadata_episodes.len(), ripped_episode_filenames.len()))
   } else {
+    // TODO: Change for movie
     let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
     let encoded_series_directory_path = encoded_series_directory.as_path();
 
@@ -103,6 +106,7 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
       return Err(RenamerError::SeriesDirectoryAlreadyExists(encoded_series_directory))
     }
 
+    // TODO: Change for movie
     let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
 
     if !files_to_rename.is_empty() {
@@ -150,6 +154,7 @@ fn get_ripped_episode_filenames(rips_session_number: &RipsSessionNumberDir) -> V
         let is_file = p.is_file();
         let has_disk_subdirectory = p.to_string_lossy().to_string().contains("/disc");
         if is_file && has_disk_subdirectory {
+          // TODO: Change for movie
           p.file_name().and_then(|name|{
             p.extension().map(|ext| FileNameAndExt::new(p, name, ext))  // Some(FileNameAndExt)
           })
@@ -160,6 +165,7 @@ fn get_ripped_episode_filenames(rips_session_number: &RipsSessionNumberDir) -> V
     .collect()
 }
 
+// TODO: Change for movie
 fn get_files_to_rename(ripped_episode_filenames: &[FileNameAndExt], metadata_episodes: &[EpisodeDefinition], renames_dir: &RipsSessionRenamesDir) -> Vec<Rename> {
   let renames_dir_path = renames_dir.as_ref();
 
@@ -204,6 +210,7 @@ fn confirm_changes(files_to_rename: &Vec<Rename>, encodes_series_folder_structur
   }
 }
 
+// TODO: Change for movie
 fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
   let series_name = series_metadata.name.clone();
   let tvdb_id = series_metadata.tvdb_id.clone();
@@ -229,6 +236,7 @@ fn create_all_directories(p: &Path) -> R {
   }
 }
 
+// TODO: Change for movie
 fn get_series_directory(encodes_dir: &EncodesDir, series_metadata: &SeriesMetaData) -> PathBuf {
   let series_folder_structure = get_series_folder_structure(series_metadata);
   encodes_dir.join(series_folder_structure)
@@ -241,6 +249,7 @@ fn perform_rename(renames: &[Rename]) {
   }
 }
 
+// TODO: Change for movie
 fn read_episodes_from_file<P: AsRef<Path>>(path: P) -> Result<EpisodesDefinition, RenamerError> {
   let file =
     fs::File::open(&path)
