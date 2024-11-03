@@ -86,11 +86,6 @@ pub fn confirm_changes(files_to_rename: &Vec<Rename>, encodes_series_folder_stru
   }
 }
 
-
-pub fn create_series_season_directories(encoded_series_directory_path: &Path) -> R {
-  create_all_directories(encoded_series_directory_path)
-}
-
 // Fails if the directory already exists
 pub fn create_all_directories(p: &Path) -> R {
   // We want to fail if the directory already exists

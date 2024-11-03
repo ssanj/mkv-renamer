@@ -95,7 +95,7 @@ fn get_files_to_rename(ripped_movie_names: &[FileNameAndExt], movie_definition: 
   ripped_movie_names
     .iter()
     .map(|fne|{
-      let file_name_with_ext = format!("{}.{}", movie_definition.name(), fne.ext);
+      let file_name_with_ext = format!("{} - {{tvdb-{}}}.{}", movie_definition.name(), movie_definition.tvdb_id(), fne.ext);
       let output_file_path = renames_dir_path.join(file_name_with_ext).to_path_buf();
       let path_to_output_file = output_file_path.to_path_buf();
       Rename::new(fne.clone().path, path_to_output_file)
@@ -107,7 +107,7 @@ fn get_files_to_rename(ripped_movie_names: &[FileNameAndExt], movie_definition: 
 fn get_movie_folder_structure(movie_definition: &MovieDefinition) -> String {
   let movie_name = movie_definition.name();
   let tvdb_id = movie_definition.tvdb_id();
-  format!("{} {{tvdb-{}}}", movie_name, tvdb_id)
+  format!("{} - {{tvdb-{}}}", movie_name, tvdb_id)
 }
 
 

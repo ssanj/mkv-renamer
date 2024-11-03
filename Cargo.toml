@@ -17,3 +17,8 @@ console = "0.15"
 
 [dev-dependencies]
 pretty_assertions = "1"
+tempfile = "3"
+assert_cmd = "2.0"
+# dir-diff="0.3"
+# similar="2.2"
+predicates="3"
