@@ -285,9 +285,9 @@ Note, unlike with `series` we only have a single `.mkv` file that goes into `dis
 
    This will:
      1. Write the correctly named episode MKV files into your `PD/sessionX/renames` folder.
-     1. Create a folder in the `PD/Encodes` folder with the following format: `<MOVIE_NAME> {tvdb-<TVDB_ID>}/MOVIE_NAME`
-     1. Create an `encode_dir.txt` file under `PD/sessionX/renames` folder with the path to `<MOVIE_NAME> {tvdb-<TVDB_ID>}/MOVIE_NAME`.
-1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/<MOVIE_NAME> {tvdb-<TVDB_ID>}/MOVIE_NAME`.
+     1. Create a folder in the `PD/Encodes` folder with the following format: `<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`
+     1. Create an `encode_dir.txt` file under `PD/sessionX/renames` folder with the path to `<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`.
+1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`.
 1. Copy the folder and its encoded contents to your media server for indexing.
 
 
