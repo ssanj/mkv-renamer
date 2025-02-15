@@ -23,6 +23,7 @@ fn returns_version() -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
 
+// TODO: Add a similar test for series
 #[test]
 fn renames_movie_from_definition_file() -> Result<(), Box<dyn std::error::Error>> {
     //Inside processing dir:
