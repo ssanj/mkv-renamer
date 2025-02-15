@@ -20,7 +20,7 @@ Now if you want something like Plex to index these episodes correctly and downlo
 The recommended format is:
 
 ```
-<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>/S<SEASON_NUMBER>E<EPISODE_NUMBER> - <EPISODE_NUMBER NAME>
+<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>/S<SEASON_NUMBER>E<EPISODE_NUMBER> - <EPISODE_NAME>
 ```
 
 For example:
@@ -43,14 +43,17 @@ See [Default output file name template](https://forum.makemkv.com/forum/viewtopi
 
 ## Usage
 
+Note: You need to ensure the files from your media are extracted in the correct numbering order. Eg. your first episode should be come first when ordering by
+either numerically or alphanumerically, followed by your second episode etc.
+
 ```
 Rename TV series ripped from makeMKV
 
 Usage: mkv-renamer <COMMAND>
 
 Commands:
-  rename  Renames a collection of ripped episodes from a metadata source
-  export  Exports metadata information for a series to a file
+  series  Process TV Series
+  movie   Process Movies
   help    Print this message or the help of the given subcommand(s)
 
 Options:
@@ -58,7 +61,49 @@ Options:
   -V, --version  Print version
 ```
 
-You need to supply a processing directory (see below), and some metadata about the series, either via a URL or a JSON file.
+You can rename TV series or Movies. Let's assume we are trying to encode `series` for the rest of this doc. `movie` is similar but only writes a single
+file to  `disc1` of a given `session`. More about that later.
+
+
+Usage for `series` from `mkv-renamer series -h`:
+
+```
+Process TV Series
+
+Usage: mkv-renamer series <COMMAND>
+
+Commands:
+  rename  Renames a collection of ripped episodes from a metadata source
+  export  Exports metadata information for a series to a file
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
+
+Arguments to `renaming` from `mkv-rename series rename -h`:
+
+```
+Renames a collection of ripped episodes from a metadata source
+
+Usage: mkv-renamer series rename [OPTIONS] --processing-dir <PROCESSING_DIR> --session-number <SESSION_NUMBER> <--url-metadata <url>|--file-metadata <file>>
+
+Options:
+  -u, --url-metadata <url>
+          The url of TVDB season information. Example: https://thetvdb.com/series/thundercats/seasons/official/1
+  -f, --file-metadata <file>
+          The location of series metadata file. This depends on the input_type specified An example formats can be found at: https://raw.githubusercontent.com/ssanj/mkv-renamer/main/series-sample.conf and https://raw.githubusercontent.com/ssanj/mkv-renamer/main/movie-sample.conf
+  -p, --processing-dir <PROCESSING_DIR>
+          The location of the processing directory (PD). See extended help for a full structure
+  -s, --session-number <SESSION_NUMBER>
+          The session number to use, accepts values from 1 to 100. The number maps to a session<SESSION_NUMBER> directory
+      --verbose
+          Verbose logging
+  -h, --help
+          Print help (see more with '--help')
+```
+
+You need to supply a processing directory (PD - see below), and some metadata about the series, either via a URL or a JSON file.
 
 ## Folder structure of processing directory
 
@@ -98,7 +143,7 @@ You can create this folder structure by running the following in your processing
 ```
 #!/bin/bash
 
-for SESSION in {1..5}; do mkdir -p Rips/session"$SESSION"/{disc1,disc2,disc3,disc4,renames}; done
+for SESSION in {1..6}; do mkdir -p Rips/session"$SESSION"/{disc1,disc2,disc3,disc4,renames}; done
 mkdir -p Encodes
 ```
 
@@ -110,7 +155,7 @@ The folder that contains all the disc subfolders. All rips will go into one of t
 
 ### Session
 
-A series that you want to rip. Having a Session directory, allows for multiple series to be ripped and prepped for encoding at the same time. For example: Ripping a series with 5 seasons at the same time, where we season will be extracted into a corresponding sessionX/disc[1..N] directory.
+A series that you want to rip. Having a Session directory, allows for multiple series to be ripped and prepped for encoding at the same time. For example: Ripping a series with 5 seasons at the same time, where each season will be extracted into a corresponding sessionX/disc[1..N] directory.
 
 ### Renames
 
@@ -177,14 +222,14 @@ You can find `tvdb_id` as follows:
 Example usage:
 
 ```
-mkv-renamer rename -p /some/processing/directory -f /path/to/<METADATA_FILE> -s 1
+mkv-renamer series rename -p /some/processing/directory -f /path/to/<METADATA_FILE> -s 1
 ```
 
 
 ## Rename with Metadata file
 
 ```
-mkv-renamer rename -p /some/processing/directory -f /path/to/<METADATA_FILE> -s 1
+mkv-renamer series rename -p /some/processing/directory -f /path/to/<METADATA_FILE> -s 1
 ```
 
 
@@ -200,7 +245,7 @@ To find the correct URL to supply to mkv-renamer do the following:
 
 Example usage:
 ```
-mkv-renamer rename -p /some/processing/directory -u https://thetvdb.com/series/star-trek-strange-new-worlds/seasons/official/1 -s 1
+mkv-renamer series rename -p /some/processing/directory -u https://thetvdb.com/series/star-trek-strange-new-worlds/seasons/official/1 -s 1
 ```
 
 ## Export Metadata file from URL to TVDB Season
@@ -209,23 +254,40 @@ If you need to just dump the data from the TVDB season URL into a file, manipula
 
 ```
  mkv-renamer export -u <TVDB_SERIES_URL> -e series.json
- mkv-renamer rename -p /some/processing/directory -f /path/to/series.json -s 1
+ mkv-renamer series rename -p /some/processing/directory -f /path/to/series.json -s 1
 ```
 
 ## Workflow
 
-1. Rip each disc of your TV series into the corresponding `PD/Rips/disc<NUMBER>` folder.
+### TV Series
+
+1. Rip each disc of your TV series into the corresponding `PD/Rips/sessionX/disc<NUMBER>` folder.
 
    For example:
-     - `disc1` rips will go into `PD/Rips/disc1`
-     - `disc2` rips will go into `PD/Rips/disc2`
+     - `disc1` rips will go into `PD/Rips/sessionX/disc1`
+     - `disc2` rips will go into `PD/Rips/sessionX/disc2`
 1. Use `mkv-renamer` to match the disc names to actual episode names.
 
    This will:
-     1. Write the correctly named episode MKV files into your `PD/Renames` folder.
+     1. Write the correctly named episode MKV files into your `PD/sessionX/renames` folder.
      1. Create a folder in the `PD/Encodes` folder with the following format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`
-     1. Create an `encode_dir.txt` file under `PD/Renames` folder with the path to `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
+     1. Create an `encode_dir.txt` file under `PD/sessionX/renames` folder with the path to `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
 1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
+1. Copy the folder and its encoded contents to your media server for indexing.
+
+### Movie
+
+1. Rip your movie into the corresponding `PD/Rips/sessionX/disc1` folder.
+
+Note, unlike with `series` we only have a single `.mkv` file that goes into `disc1` of your `session`. If you have multiple movies, then put them into separate `session`s each within `disc1`.
+
+1. Use `mkv-renamer` to match the disc names to actual movie name.
+
+   This will:
+     1. Write the correctly named episode MKV files into your `PD/sessionX/renames` folder.
+     1. Create a folder in the `PD/Encodes` folder with the following format: `<MOVIE_NAME> {tvdb-<TVDB_ID>}/MOVIE_NAME`
+     1. Create an `encode_dir.txt` file under `PD/sessionX/renames` folder with the path to `<MOVIE_NAME> {tvdb-<TVDB_ID>}/MOVIE_NAME`.
+1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/<MOVIE_NAME> {tvdb-<TVDB_ID>}/MOVIE_NAME`.
 1. Copy the folder and its encoded contents to your media server for indexing.
 
 
