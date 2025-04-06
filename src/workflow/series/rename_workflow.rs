@@ -58,7 +58,7 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
 
   let rips_directory = processing_dir.rips_session_number(session_number);
   let renames_directory = processing_dir.rips_session_renames_dir(session_number);
-  let encodes_directory = processing_dir.encodes_dir();
+  let encodes_directory = processing_dir.tv_encodes_dir();
 
   common::dump_processing_info(processing_dir, session_number, verbose);
 

@@ -100,6 +100,14 @@ impl ProcessingDir {
   pub fn encodes_dir(&self) -> EncodesDir {
     EncodesDir(self.0.join("Encodes"))
   }
+
+  pub fn movies_encodes_dir(&self) -> EncodesDir {
+    EncodesDir(self.0.join("Encodes").join("movies"))
+  }
+
+  pub fn tv_encodes_dir(&self) -> EncodesDir {
+    EncodesDir(self.0.join("Encodes").join("tv"))
+  }
 }
 
 impl AsRef<Path> for ProcessingDir {
