@@ -136,6 +136,8 @@ Your processing directory (PD) should have the following structure:
         |- renames
 
   |- Encodes
+    |- tv
+    |- movies
 ```
 
 You can create this folder structure by running the following in your processing directory:
@@ -163,7 +165,7 @@ Once you run mkv-renamer, the renamed files from each session will be renamed/mo
 
 ### Encodes
 
-The encodes directory is where the renamed files are encoded to. mkv-renamer will create a target folder of the format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`. When encoding the renamed files, choose this as the target folder. This is common across all sessions and allows for easy copying from one source directory to your NAS or media server.
+The encodes directory is where the renamed files are encoded to. This will be either `tv` or `movies`. mkv-renamer will create a target folder of the format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>` or `MOVIE NAME {tvdb-<TVDB_ID>}` under `tv` or `movies` respectively. When encoding the renamed files, choose this as the target folder. This is common across all sessions and allows for easy copying from one source directory to your NAS or media server.
 
 ## Metadata
 
@@ -270,9 +272,9 @@ If you need to just dump the data from the TVDB season URL into a file, manipula
 
    This will:
      1. Write the correctly named episode MKV files into your `PD/sessionX/renames` folder.
-     1. Create a folder in the `PD/Encodes` folder with the following format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`
+     1. Create a folder in the `PD/Encodes/tv` folder with the following format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`
      1. Create an `encode_dir.txt` file under `PD/sessionX/renames` folder with the path to `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
-1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
+1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/tv/<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
 1. Copy the folder and its encoded contents to your media server for indexing.
 
 ### Movie
@@ -285,9 +287,9 @@ Note, unlike with `series` we only have a single `.mkv` file that goes into `dis
 
    This will:
      1. Write the correctly named episode MKV files into your `PD/sessionX/renames` folder.
-     1. Create a folder in the `PD/Encodes` folder with the following format: `<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`
+     1. Create a folder in the `PD/Encodes/movies` folder with the following format: `<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`
      1. Create an `encode_dir.txt` file under `PD/sessionX/renames` folder with the path to `<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`.
-1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`.
+1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/movies/<MOVIE_NAME> {tvdb-<TVDB_ID>}/<MOVIE_NAME> {tvdb-<TVDB_ID>}`.
 1. Copy the folder and its encoded contents to your media server for indexing.
 
 
