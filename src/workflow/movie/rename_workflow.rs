@@ -15,17 +15,17 @@ pub async fn perform(rename_args: RenameArgs) -> ROutput {
 
   match metadata_type {
     ConfigMetadataInputType::Url(url) =>
-      handle_url_metadata(&url, &processing_dir, &session_number, rename_args.verbose).await,
+      handle_url_metadata(&url, &processing_dir, &session_number, rename_args.verbose, rename_args.skip_files).await,
     ConfigMetadataInputType::File(file) => {
       let file_path = Path::new(&file);
-      handle_file_metadata(file_path, &processing_dir, &session_number, rename_args.verbose)
+      handle_file_metadata(file_path, &processing_dir, &session_number, rename_args.verbose, rename_args.skip_files)
     },
     ConfigMetadataInputType::Invalid => Err(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type))),
   }
 }
 
 
-async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
+async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool, skip_files: bool) -> ROutput {
   let page_content = download_metadata(url).await?;
   let movie_definition = get_movie_definition(&page_content);
 
@@ -33,16 +33,16 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
   if !processing_dir_path.exists() {
       Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned()))
   } else {
-    program(processing_dir, session_number, &movie_definition, verbose)
+    program(processing_dir, session_number, &movie_definition, verbose, skip_files)
   }
 }
 
-fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
+fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool, skip_files: bool) -> ROutput {
   let processing_dir_path = processing_dir.as_ref();
   match (series_metadata_path.exists(), processing_dir_path.exists()) {
       (true, true) => {
         let movie_definition: MovieDefinition = common::read_input_from_file(series_metadata_path)?;
-        program(processing_dir, session_number, &movie_definition, verbose)
+        program(processing_dir, session_number, &movie_definition, verbose, skip_files)
       },
       (false, false) => Err(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned())),
       (_, false) => Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned())),
@@ -51,7 +51,7 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
 }
 
 
-fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, movie_definition: &MovieDefinition, verbose: bool) -> ROutput {
+fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, movie_definition: &MovieDefinition, verbose: bool, skip_files: bool) -> ROutput {
   let rips_directory = processing_dir.rips_session_number(session_number);
   let renames_directory = processing_dir.rips_session_renames_dir(session_number);
   let encodes_directory = processing_dir.movies_encodes_dir();
@@ -60,7 +60,20 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, mo
 
   let ripped_filenames = common::get_ripped_filenames(&rips_directory);
 
-  if ripped_filenames.is_empty() {
+  // Skip files.
+  // Only create encode file and output directory
+  if skip_files {
+    let encoded_movie_directory = get_movie_directory(&encodes_directory, movie_definition);
+    let encoded_movie_directory_path = encoded_movie_directory.as_path();
+
+    if encoded_movie_directory_path.exists() {
+      return Err(RenamerError::MovieDirectoryAlreadyExists(encoded_movie_directory))
+    }
+
+    common::create_all_directories(encoded_movie_directory_path)
+      .and(common::write_encodes_file(&renames_directory, encoded_movie_directory_path))
+      .map(|_| Output::Success)
+  } else if ripped_filenames.is_empty() {
     Err(RenamerError::NoMovieDefinitionFound)
   } else {
     let encoded_movie_directory = get_movie_directory(&encodes_directory, movie_definition);

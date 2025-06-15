@@ -15,17 +15,17 @@ pub async fn perform(rename_args: RenameArgs) -> ROutput {
 
   match metadata_type {
     ConfigMetadataInputType::Url(url) =>
-      handle_url_metadata(&url, &processing_dir, &session_number, rename_args.verbose).await,
+      handle_url_metadata(&url, &processing_dir, &session_number, rename_args.verbose, rename_args.skip_files).await,
     ConfigMetadataInputType::File(file) => {
       let file_path = Path::new(&file);
-      handle_file_metadata(file_path, &processing_dir, &session_number, rename_args.verbose)
+      handle_file_metadata(file_path, &processing_dir, &session_number, rename_args.verbose, rename_args.skip_files)
     },
     ConfigMetadataInputType::Invalid => Err(RenamerError::InvalidMetadataConfiguration(format!("{:?}", &metadata_input_type))),
   }
 }
 
 
-async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
+async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool, skip_files: bool) -> ROutput {
   let page_content = download_metadata(url).await?;
   let episodes_definition = get_series_metadata(&page_content);
 
@@ -33,17 +33,17 @@ async fn handle_url_metadata(url: &str, processing_dir: &ProcessingDir, session_
   if !processing_dir_path.exists() {
       Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned()))
   } else {
-    program(processing_dir, session_number, &episodes_definition, verbose)
+    program(processing_dir, session_number, &episodes_definition, verbose, skip_files)
   }
 }
 
 
-fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool) -> ROutput {
+fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &ProcessingDir, session_number: &SessionNumberDir, verbose: bool, skip_files: bool) -> ROutput {
   let processing_dir_path = processing_dir.as_ref();
   match (series_metadata_path.exists(), processing_dir_path.exists()) {
       (true, true) => {
         let episodes_definition = common::read_input_from_file(series_metadata_path)?;
-        program(processing_dir, session_number, &episodes_definition, verbose)
+        program(processing_dir, session_number, &episodes_definition, verbose, skip_files)
       },
       (false, false) => Err(RenamerError::ProcessingDirAndMetadaPathDoesNotExit(processing_dir_path.to_owned(), series_metadata_path.to_owned())),
       (_, false) => Err(RenamerError::ProcessingDirectoryDoesNotExist(processing_dir_path.to_owned())),
@@ -52,7 +52,7 @@ fn handle_file_metadata(series_metadata_path: &Path, processing_dir: &Processing
 }
 
 
-fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, episodes_definition: &EpisodesDefinition, verbose: bool) -> ROutput {
+fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, episodes_definition: &EpisodesDefinition, verbose: bool, skip_files: bool) -> ROutput {
   let metadata_episodes = &episodes_definition.episodes;
   let series_metadata = &episodes_definition.metadata;
 
@@ -62,35 +62,50 @@ fn program(processing_dir: &ProcessingDir, session_number: &SessionNumberDir, ep
 
   common::dump_processing_info(processing_dir, session_number, verbose);
 
-  let mut ripped_episode_filenames = common::get_ripped_filenames(&rips_directory);
-  // Sort disk file names in ascending order
-  ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(fne2).unwrap());
+  // We want to skip files.
+  // Only create output directory and encodes file.
+  if skip_files {
+      let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
+      let encoded_series_directory_path = encoded_series_directory.as_path();
 
-  // We have more ripped episodes than metadata episode names. Abort.
-  if ripped_episode_filenames.len() > metadata_episodes.len() {
-    Err(RenamerError::NotEnoughMetadataForEpisodes(metadata_episodes.len(), ripped_episode_filenames.len()))
-  } else {
-    let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
-    let encoded_series_directory_path = encoded_series_directory.as_path();
-
-    if encoded_series_directory_path.exists() {
-      return Err(RenamerError::SeriesDirectoryAlreadyExists(encoded_series_directory))
-    }
-
-    let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
-
-    if !files_to_rename.is_empty() {
-      match common::confirm_changes(&files_to_rename, encoded_series_directory_path) {
-        RenamesResult::Correct => {
-          common::perform_rename(&files_to_rename);
-          common::create_all_directories(encoded_series_directory_path)
-            .and(common::write_encodes_file(&renames_directory, encoded_series_directory_path))
-            .map(|_| Output::Success)
-        },
-        RenamesResult::Wrong => Ok(Output::UserCanceled)
+      if encoded_series_directory_path.exists() {
+        return Err(RenamerError::SeriesDirectoryAlreadyExists(encoded_series_directory))
       }
+
+    common::create_all_directories(encoded_series_directory_path)
+      .and(common::write_encodes_file(&renames_directory, encoded_series_directory_path))
+      .map(|_| Output::Success)
+  } else {
+    let mut ripped_episode_filenames = common::get_ripped_filenames(&rips_directory);
+    // Sort disk file names in ascending order
+    ripped_episode_filenames.sort_by(|fne1, fne2| fne1.partial_cmp(fne2).unwrap());
+
+    // We have more ripped episodes than metadata episode names. Abort.
+    if ripped_episode_filenames.len() > metadata_episodes.len() {
+      Err(RenamerError::NotEnoughMetadataForEpisodes(metadata_episodes.len(), ripped_episode_filenames.len()))
     } else {
-      Err(RenamerError::NoFilesToRename)
+      let encoded_series_directory = get_series_directory(&encodes_directory, series_metadata);
+      let encoded_series_directory_path = encoded_series_directory.as_path();
+
+      if encoded_series_directory_path.exists() {
+        return Err(RenamerError::SeriesDirectoryAlreadyExists(encoded_series_directory))
+      }
+
+      let files_to_rename = get_files_to_rename(&ripped_episode_filenames, metadata_episodes, &renames_directory);
+
+      if !files_to_rename.is_empty() {
+        match common::confirm_changes(&files_to_rename, encoded_series_directory_path) {
+          RenamesResult::Correct => {
+            common::perform_rename(&files_to_rename);
+            common::create_all_directories(encoded_series_directory_path)
+              .and(common::write_encodes_file(&renames_directory, encoded_series_directory_path))
+              .map(|_| Output::Success)
+          },
+          RenamesResult::Wrong => Ok(Output::UserCanceled)
+        }
+      } else {
+        Err(RenamerError::NoFilesToRename)
+      }
     }
   }
 }

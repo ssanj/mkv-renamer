@@ -53,6 +53,12 @@ pub struct RenameArgs {
   /// Verbose logging
   #[clap(long, value_parser)]
   pub verbose: bool,
+
+  /// Skips file checks.
+  ///
+  /// If this flag is specified, the encodes file will be created in the rename directory and the output directory will be created for the series or movie. No files will be renamed.
+  #[clap(long, value_parser)]
+  pub skip_files: bool,
 }
 
 #[derive(Args, Clone, Debug)]
