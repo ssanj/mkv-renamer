@@ -99,6 +99,8 @@ Options:
           The session number to use, accepts values from 1 to 100. The number maps to a session<SESSION_NUMBER> directory
       --verbose
           Verbose logging
+      --skip-files
+          Skips file checks
   -h, --help
           Print help (see more with '--help')
 ```
