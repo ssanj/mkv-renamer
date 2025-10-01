@@ -133,7 +133,7 @@ fn get_series_folder_structure(series_metadata: &SeriesMetaData) -> String {
   let series_name = series_metadata.name.clone();
   let tvdb_id = series_metadata.tvdb_id.clone();
   let season_number = series_metadata.season_number.clone();
-  format!("{} {{tvdb-{}}}/Season {:0>2}", series_name, tvdb_id, season_number)
+  format!("{series_name} {{tvdb-{tvdb_id}}} [tvdbid-{tvdb_id}]/Season {season_number:0>2}")
 }
 
 

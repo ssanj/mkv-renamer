@@ -126,7 +126,7 @@ fn renames_tv_series_from_definition_file() -> Result<(), Box<dyn std::error::Er
       .assert()
       .success();
 
-    let encodes_tv_dir = tv_encodes.join("Thundercats {tvdb-70355}").join("Season 01");
+    let encodes_tv_dir = tv_encodes.join("Thundercats {tvdb-70355} [tvdbid-70355]").join("Season 01");
     let renames_dir = rips.join("session3").join("renames");
 
     let mut renamed_files =
@@ -253,9 +253,9 @@ fn renames_movie_from_definition_file() -> Result<(), Box<dyn std::error::Error>
       .assert()
       .success();
 
-    let encodes_movie_dir = movie_encodes.join("The Big Lebowski - {tvdb-659}");
+    let encodes_movie_dir = movie_encodes.join("The Big Lebowski - {tvdb-659} [tvdbid-659]");
     let renames_dir = rips.join("session1").join("renames");
-    let renamed_file = renames_dir.join("The Big Lebowski - {tvdb-659}.mkv");
+    let renamed_file = renames_dir.join("The Big Lebowski - {tvdb-659} [tvdbid-659].mkv");
 
     let encodes_file = renames_dir.join("encode_dir.txt");
 

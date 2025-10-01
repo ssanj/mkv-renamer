@@ -15,18 +15,18 @@ When you rip TV series from optical media, the file names are not that of the ep
 1. disc4 -> `DVD_TS_01.mkv`, `DVD_TS_02.mkv`
 
 
-Now if you want something like Plex to index these episodes correctly and download the appropriate art and metadata you need to follow certain [conventions](https://support.plex.tv/articles/naming-and-organizing-your-tv-show-files/). In addition if you tag the series with [The TVDB](https://thetvdb.com/) or [IMDB](https://www.imdb.com/) series ids, the index process is more accurate. I've chosen to use the TVDB ids in this case.
+Now if you want something like Plex or Jellyfin to index these episodes correctly and download the appropriate art and metadata you need to follow certain [conventions](https://support.plex.tv/articles/naming-and-organizing-your-tv-show-files/). In addition if you tag the series with [The TVDB](https://thetvdb.com/) or [IMDB](https://www.imdb.com/) series ids, the index process is more accurate. I've chosen to use the TVDB ids in this case.
 
-The recommended format for tv series is:
+The following format for tv series works across Plex and Jellyfin:
 
 ```
-<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>/S<SEASON_NUMBER>E<EPISODE_NUMBER> - <EPISODE_NAME>
+<SERIES_NAME> {tvdb-<TVDB_ID>} [tvdbid-<TVDB_ID>]/SEASON <SEASON_NUMBER>/S<SEASON_NUMBER>E<EPISODE_NUMBER> - <EPISODE_NAME>
 ```
 
 For example:
 
 ```
-Band of Brothers {tvdb-74205}/Season 01/S01E01 - Currahee
+Band of Brothers {tvdb-74205} [tvdbid-74205]/Season 01/S01E01 - Currahee
 ```
 
 Renaming these sequential rips is tedious and error-prone - specially if you have a lot of discs. mkv-renamer hopes to make that process easier.
@@ -167,7 +167,7 @@ Once you run mkv-renamer, the renamed files from each session will be renamed/mo
 
 ### Encodes
 
-The encodes directory is where the renamed files are encoded to. This will be either `tv` or `movies`. mkv-renamer will create a target folder of the format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>` or `MOVIE NAME {tvdb-<TVDB_ID>}` under `tv` or `movies` respectively. When encoding the renamed files, choose this as the target folder. This is common across all sessions and allows for easy copying from one source directory to your NAS or media server.
+The encodes directory is where the renamed files are encoded to. This will be either `tv` or `movies`. mkv-renamer will create a target folder of the format: `<SERIES_NAME> {tvdb-<TVDB_ID>} [tvdbid-<TVDB_ID>]/SEASON <SEASON_NUMBER>` or `MOVIE NAME {tvdb-<TVDB_ID>} [tvdbid-<TVDB_ID>]` under `tv` or `movies` respectively. When encoding the renamed files, choose this as the target folder. This is common across all sessions and allows for easy copying from one source directory to your NAS or media server.
 
 ## Metadata
 
@@ -274,7 +274,7 @@ If you need to just dump the data from the TVDB season URL into a file, manipula
 
    This will:
      1. Write the correctly named episode MKV files into your `PD/sessionX/renames` folder.
-     1. Create a folder in the `PD/Encodes/tv` folder with the following format: `<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`
+     1. Create a folder in the `PD/Encodes/tv` folder with the following format: `<SERIES_NAME> {tvdb-<TVDB_ID>} [tvdbid-<TVDB_ID>]/SEASON <SEASON_NUMBER>`
      1. Create an `encode_dir.txt` file under `PD/sessionX/renames` folder with the path to `PD/Encodes/tv/<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
 1. Use a tool like [Handbrake](https://handbrake.fr/) to encode your MKV to something smaller like mp4 and choose the above folder as the target: `PD/Encodes/tv/<SERIES_NAME> {tvdb-<TVDB_ID>}/SEASON <SEASON_NUMBER>`.
 1. Copy the folder and its encoded contents to your media server for indexing.
